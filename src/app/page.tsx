@@ -1,15 +1,18 @@
- import dynamic from "next/dynamic";
-import { Metadata } from "next";
-
- const ECommerce = dynamic(() => import("@/components/Dashboard/E-commerce"), {
-  ssr: false,
-});
-
-export const metadata: Metadata = {
-  title: "Hotel Dashboard Page | NextAdmin - Next.js Dashboard Kit",
-  description: "This is Next.js Home page for Hotel Dashboard Kit",
-};
+"use client";
+import React, { useEffect, useState } from "react";
+import Login from "../components/Login";
+import Cookies from "js-cookie";
+import ECommerce from "@/components/Dashboard/E-commerce";
 
 export default function Home() {
-  return <ECommerce />;
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  useEffect(() => {
+    const token = Cookies.get("token");
+    if (token) {
+      setIsLoggedIn(true);
+    }
+  }, []);
+
+  return isLoggedIn ? <ECommerce /> : <Login />;
 }
