@@ -1,5 +1,5 @@
 import React from 'react'
-import Hotel from '../hotelsPages/Hotel'
+import Hotel from '../veersionsPages/Version'
 
 const page = () => {
     return (

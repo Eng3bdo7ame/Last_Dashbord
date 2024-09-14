@@ -2,8 +2,8 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { FaStar } from 'react-icons/fa';
 import gsap from 'gsap';
-import HotelTable from './HotelTable';
-import AddHotel from '../hotelsPages/AddHotel';
+import HotelTable from './versionTable';
+import AddHotel from './AddVersions';
 import PreviewHotel from '../requestPages/PreviewRequest';
 import ChartEight from '@/components/Charts/ChartEight';
 import ChartNine from '@/components/Charts/ChartNine';
@@ -20,8 +20,7 @@ const Hotel = ({ role }) => {
     }, []);
 
     useEffect(() => {
-        // Ensure this runs only on the client side
-        if (typeof window !== 'undefined') {
+         if (typeof window !== 'undefined') {
             const ctx = gsap.context(() => {
                 gsap.fromTo(
                     ".chart-container",
