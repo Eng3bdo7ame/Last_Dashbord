@@ -148,7 +148,7 @@ const DraggableBoard = () => {
     };
 
     return (
-        <div className='pt-[100px] xl:w-[78%] lg:w-[68%] md:w-[95%] float-end'>
+        <div className=''>
             <div className='relative flex justify-between'>
                 <h1 className='text-7xl'>Tasks</h1>
                 <button

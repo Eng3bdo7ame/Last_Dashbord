@@ -1,4 +1,3 @@
-
 import { useEffect, useState, useCallback } from 'react';
 import axios from 'axios';
 import Cookies from 'js-cookie';
@@ -9,6 +8,8 @@ const VersionTable = ({ openPreview, openCreate }) => {
     const [modalType, setModalType] = useState(null);
     const [tableData, setTableData] = useState([]);
     const [tableHeaders, setTableHeaders] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
     const fetchData = useCallback(async () => {
         try {
@@ -16,51 +17,24 @@ const VersionTable = ({ openPreview, openCreate }) => {
             if (!token) {
                 console.error('No token found in cookies');
                 return;
-
-const HotelTable = ({ openCreate, openPreview }) => {
-    const [data, setData] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-
-    const headers = [
-        { key: 'version', label: 'Version' },
-        { key: 'id', label: 'Product ID' },
-        { key: 'price', label: 'Price' },
-        { key: 'quantity', label: 'Quantity' },
-        { key: 'sale', label: 'Sale' },
-        { key: 'stock', label: 'Stock' },
-        { key: 'start_date', label: 'Start Date' },
-    ];
-
-    useEffect(() => {
-        const fetchData = async () => {
-            try {
-                const token = localStorage.getItem('token');
-
-
-                 const response = await axios.get('https://dashboard.cowdly.com/api/project_versions/', {
-                    headers: {
-                        'Authorization': `Token ${token}`
-                    }
-                });
-
-                setData(response.data);
-            } catch (error) {
-                setError(error);
-            } finally {
-                setLoading(false);
-
             }
 
-          
+            const response = await axios.get('https://dashboard.cowdly.com/api/project_versions/', {
+                headers: {
+                    'Authorization': `Token ${token}`
+                }
+            });
 
-            if (data.length > 0) {
+            setTableData(response.data);
+            setLoading(false);
+
+            if (response.data.length > 0) {
                 // Set table headers based on keys of the first item
-                const headers = Object.keys(data[0]);
+                const headers = Object.keys(response.data[0]);
                 setTableHeaders(headers.map(header => ({ key: header, label: header })));
 
                 // Format table data
-                const formattedData = data.map(item => ({
+                const formattedData = response.data.map(item => ({
                     ...item // نعرض كل القيم من الكائن كما هي بدون تعديل
                 }));
                 setTableData(formattedData);
@@ -71,9 +45,10 @@ const HotelTable = ({ openCreate, openPreview }) => {
             }
         } catch (error) {
             console.error('Error fetching data:', error.response?.data || error.message);
+            setError(error);
+            setLoading(false);
         }
     }, []);
-
 
     useEffect(() => {
         fetchData(); // Fetch data on component mount
@@ -87,19 +62,15 @@ const HotelTable = ({ openCreate, openPreview }) => {
         fetchData(); // Refresh the data after a new client is added
     };
 
-
     if (loading) return <div>Loading...</div>;
     if (error) return <div>Error: {error.message}</div>;
-
 
     return (
         <div>
             <Table
-
                 data={tableData}
                 headers={tableHeaders}
                 openCreate={openCreateModal}
-
                 openPreview={openPreview}
                 addItemLabel="Version"
                 onDelete={() => console.log('Delete function not implemented')}
