@@ -13,15 +13,6 @@ import dynamic from "next/dynamic";
 
 const PreviewClients = lazy(() => import("./PreviewClients"));
 const AddClients = lazy(() => import("./AddClients"));
-const ChartSeven = dynamic(() => import("@/components/Charts/ChartSeven"), {
-  ssr: false,
-});
-const MapOne = dynamic(() => import("@/components/Maps/MapOne"), {
-  ssr: false,
-});
-const ChartTwo = dynamic(() => import("@/components/Charts/ChartTwo"), {
-  ssr: false,
-});
 
 const Clients: React.FC<{ role: string }> = ({ role }) => {
   const [openPreview, setOpenPreview] = useState(false);
@@ -52,20 +43,7 @@ const Clients: React.FC<{ role: string }> = ({ role }) => {
 
   const chartSection = useMemo(
     () => (
-      <div className="flex flex-col flex-wrap items-center justify-between gap-4 md:flex-row lg:flex-row xl:flex-row">
-        <div className="flex-1 py-8">
-          <ChartSeven />
-        </div>
-        <div className="flex-1 py-8">
-          <MapOne />
-        </div>
-        <div className="flex-1 bg-white py-6 dark:bg-gray-dark dark:shadow-card">
-          <h3 className="px-4 pb-5 font-sans text-lg font-bold">
-            Total Revenue
-          </h3>
-          <ChartTwo />
-        </div>
-      </div>
+      <div className="flex flex-col flex-wrap items-center justify-between gap-4 md:flex-row lg:flex-row xl:flex-row"></div>
     ),
     [],
   );
@@ -97,4 +75,4 @@ const Clients: React.FC<{ role: string }> = ({ role }) => {
   );
 };
 
-export default React.memo(Clients);
+export default Clients;

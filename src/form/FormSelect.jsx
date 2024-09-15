@@ -1,40 +1,27 @@
-
-
 import React from "react";
 
-function FormSelect({ label, selectLabel, handleChange, options, value, name, readOnly }) {
-
+const FormSelect = ({ label, name, value, onChange, options }) => {
   return (
-    <div>
-      <label
-        htmlFor={selectLabel}
-        className="block mb-2 text-md font-medium   font-sans  outline-none focus:border-gray-600 dark:focus:border-gray-100 duration-100 ease-linear"
-      >
+    <div className="mb-4">
+      <label htmlFor={name} className="block text-sm font-medium text-gray-700 dark:text-gray-300">
         {label}
       </label>
-
       <select
-        onChange={handleChange}
-        id={selectLabel}
-        readOnly={readOnly}
+        id={name}
         name={name}
-        className="w-full p-2.5 dark:bg-gray-50 rounded-md
-        dark:border-gray-600 dark:placeholder-gray-400
-         outline-none border text-gray-700 bg-gray-50
-        focus:border-orange-400 dark:focus:border-orange-400
-        duration-100 ease-linear"
         value={value}
+        onChange={onChange}
+        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm"
       >
-        <option value={""}> select </option>
-        {Array.isArray(options) &&
-          options.map((option, index) => (
-            <option key={index} value={option.value}>
-              {option.label}
-            </option>
-          ))}
+        <option value="">Select an option</option>
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
       </select>
     </div>
   );
-}
+};
 
 export default FormSelect;

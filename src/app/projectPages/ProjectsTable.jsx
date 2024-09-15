@@ -4,10 +4,11 @@ import Cookies from 'js-cookie';
 import Table from '../Table';
 import AddProjects from './AddProjects'; // Ensure the path is correct
 
-const ProjectsTable = ({ openPreview, openCreate }) => {
+const ProjectTable = ({ openPreview, openCreate }) => {
     const [modalType, setModalType] = useState(null);
     const [tableData, setTableData] = useState([]);
     const [tableHeaders, setTableHeaders] = useState([]);
+    const [clients, setClients] = useState([]);
 
     const fetchData = useCallback(async () => {
         try {
@@ -17,26 +18,41 @@ const ProjectsTable = ({ openPreview, openCreate }) => {
                 return;
             }
 
-            const response = await axios.get('https://dashboard.cowdly.com/api/projects/', {
-                headers: {
-                    'Authorization': `Token ${token}`, // Include token in the request header
-                },
-            });
+            // Fetch both projects and clients
+            const [projectsResponse, clientsResponse] = await Promise.all([
+                axios.get('https://dashboard.cowdly.com/api/projects/', {
+                    headers: {
+                        'Authorization': `Token ${token}`, // Include token in the request header
+                    },
+                }),
+                axios.get('https://dashboard.cowdly.com/api/clients/', {
+                    headers: {
+                        'Authorization': `Token ${token}`,
+                    },
+                })
+            ]);
 
-            const data = response.data;
+            const projects = projectsResponse.data;
+            const clientsData = clientsResponse.data;
 
-            if (data.length > 0) {
-                // Set table headers based on keys of the first item
-                const headers = Object.keys(data[0]);
-                setTableHeaders(headers);
+            // Save clients for later use
+            setClients(clientsData);
 
-                // Format table data
-                const formattedData = data.map(item =>
-                    headers.map(header => item[header] || 'N/A')
-                );
-                setTableData(formattedData);
+            if (projects.length > 0) {
+                const headers = Object.keys(projects[0]);
+                setTableHeaders(headers.map(header => ({ key: header, label: header })));
+
+                // Replace client ID with client name
+                const formattedProjects = projects.map(project => {
+                    const client = clientsData.find(c => c.id === project.client);
+                    return {
+                        ...project,
+                        client: client ? client.name : 'Unknown Client'
+                    };
+                });
+
+                setTableData(formattedProjects);
             } else {
-                // If data is empty
                 setTableHeaders([]);
                 setTableData([]);
             }
@@ -49,38 +65,35 @@ const ProjectsTable = ({ openPreview, openCreate }) => {
         fetchData(); // Fetch data on component mount
     }, [fetchData]);
 
-    const openCreateModal = (type) => {
-        setModalType(type);
-    };
-
-    const handleAddProjectClick = () => {
-        openCreateModal("project");
-    };
-
-    const handleProjectAdded = () => {
-        fetchData(); // Refresh the data after a new project is added
+    // Function to add the new project directly to the table without fetching
+    const addNewProjectToTable = (newProject) => {
+        const client = clients.find(c => c.id === newProject.client);
+        const formattedProject = {
+            ...newProject,
+            client: client ? client.name : 'Unknown Client'
+        };
+        setTableData((prevData) => [...prevData, formattedProject]);
     };
 
     return (
         <div>
             <Table
                 data={tableData}
-                headers={tableHeaders.map(header => ({ key: header, label: header }))}
-                openCreate={openCreate}
+                headers={tableHeaders}
+                openCreate={() => setModalType('project')}
                 openPreview={openPreview}
-                addItemLabel="Add Project"
-                onAddClick={handleAddProjectClick} // Pass the handler
+                addItemLabel="Project"
                 onDelete={() => console.log('Delete function not implemented')}
             />
             {modalType === "project" && (
                 <AddProjects
                     closeModal={() => setModalType(null)}
                     modal={modalType === "project"}
-                    onProjectAdded={handleProjectAdded}
+                    onClientAdded={addNewProjectToTable} // Pass the function to update the table
                 />
             )}
         </div>
     );
 };
 
-export default ProjectsTable;
+export default ProjectTable;

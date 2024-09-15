@@ -24,20 +24,11 @@ const ClientsTable = ({ openPreview, openCreate }) => {
             });
 
             const data = response.data;
-            console.log("API Data:", data); // للتحقق من البيانات القادمة من API
-
             if (data.length > 0) {
-                // Set table headers based on keys of the first item
                 const headers = Object.keys(data[0]);
                 setTableHeaders(headers.map(header => ({ key: header, label: header })));
-
-                // Format table data
-                const formattedData = data.map(item => ({
-                    ...item // نعرض كل القيم من الكائن كما هي بدون تعديل
-                }));
-                setTableData(formattedData);
+                setTableData(data);
             } else {
-                // If data is empty
                 setTableHeaders([]);
                 setTableData([]);
             }
@@ -50,12 +41,9 @@ const ClientsTable = ({ openPreview, openCreate }) => {
         fetchData(); // Fetch data on component mount
     }, [fetchData]);
 
-    const openCreateModal = (type) => {
-        setModalType(type);
-    };
-
-    const handleClientAdded = () => {
-        fetchData(); // Refresh the data after a new client is added
+    // Function to add the new client directly to the table without fetching
+    const addNewClientToTable = (newClient) => {
+        setTableData((prevData) => [...prevData, newClient]); // Add new client to the existing table data
     };
 
     return (
@@ -63,7 +51,7 @@ const ClientsTable = ({ openPreview, openCreate }) => {
             <Table
                 data={tableData}
                 headers={tableHeaders}
-                openCreate={openCreateModal}
+                openCreate={() => setModalType('client')}
                 openPreview={openPreview}
                 addItemLabel="Clients"
                 onDelete={() => console.log('Delete function not implemented')}
@@ -72,7 +60,7 @@ const ClientsTable = ({ openPreview, openCreate }) => {
                 <AddClients
                     closeModal={() => setModalType(null)}
                     modal={modalType === "client"}
-                    onClientAdded={handleClientAdded}
+                    onClientAdded={addNewClientToTable} // Pass the function to update the table
                 />
             )}
         </div>

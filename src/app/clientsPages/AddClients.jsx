@@ -7,10 +7,10 @@ import FormText from "../../form/FormText";
 
 const AddClients = ({ closeModal, modal, onClientAdded }) => {
     const [formData, setFormData] = useState({
-        "name": "",
-        "email": "",
-        "phone": "",
-        "address": ""
+        name: "",
+        email: "",
+        phone: "",
+        address: ""
     });
 
     const handleChange = useCallback((e) => {
@@ -37,9 +37,10 @@ const AddClients = ({ closeModal, modal, onClientAdded }) => {
                 },
             });
 
-            console.log('Client added successfully:', response.data);
+            const newClient = response.data;
+            console.log('Client added successfully:', newClient);
+            onClientAdded(newClient); // Pass the new client data to the parent component
             closeModal(); // Close the modal on successful submission
-            onClientAdded(); // Call the callback function to refresh the table data
 
         } catch (error) {
             console.error('Error adding client:', error.response?.data || error.message);
