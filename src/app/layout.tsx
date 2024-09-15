@@ -1,7 +1,6 @@
 "use client";
 import React from "react";
- import "jsvectormap/dist/css/jsvectormap.css";
- import "@/css/style.css";
+  import "@/css/style.css";
 import DefaultLayout from "@/components/Layouts/DefaultLaout";
 
 export default function RootLayout({
