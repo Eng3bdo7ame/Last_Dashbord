@@ -1,16 +1,16 @@
- 
+
 
 import React from "react";
-  
-function FormSelect({ selectLabel, handleChange, options, value, name, readOnly }) {
- 
+
+function FormSelect({ label, selectLabel, handleChange, options, value, name, readOnly }) {
+
   return (
     <div>
       <label
         htmlFor={selectLabel}
         className="block mb-2 text-md font-medium   font-sans  outline-none focus:border-gray-600 dark:focus:border-gray-100 duration-100 ease-linear"
       >
-        {selectLabel}
+        {label}
       </label>
 
       <select

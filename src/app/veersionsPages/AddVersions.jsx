@@ -11,12 +11,13 @@ import FormSelect from "../../form/FormSelect";
 
 const AddVersions = ({ closeModal, modal }) => {
     const [formData, setFormData] = useState({
-        versionName: "",
-        versionCost: "",
-        projectManager: "",
+        name: "",
+        budget: "",
+        start_date: "",
+        duration: "",
         project: "",
+        projectTeam: "",
         description: "",
-        duration: ""
     });
 
     const today = new Date();
@@ -52,9 +53,9 @@ const AddVersions = ({ closeModal, modal }) => {
         try {
             const response = await axios.post("https://dashboard.cowdly.com/api/project_versions/", versionData);
             console.log("Version added successfully:", response.data);
-         } catch (error) {
+        } catch (error) {
             console.error("Error adding version:", error);
-         } finally {
+        } finally {
             setLoading(false);
         }
     };
@@ -92,8 +93,8 @@ const AddVersions = ({ closeModal, modal }) => {
                                 <div className="md:w-1/2">
                                     <FormText
                                         label="Version Name"
-                                        name="versionName"
-                                        value={formData.versionName}
+                                        name="name"
+                                        value={formData.name}
                                         placeholder="Enter Version Name"
                                         required
                                         onChange={handleChange}
@@ -102,8 +103,8 @@ const AddVersions = ({ closeModal, modal }) => {
                                 <div className="md:w-1/2">
                                     <FormNumber
                                         label="Version Cost"
-                                        name="versionCost"
-                                        value={formData.versionCost}
+                                        name="budget"
+                                        value={formData.budget}
                                         placeholder="Enter Version Cost"
                                         required
                                         onChange={handleChange}
@@ -111,26 +112,30 @@ const AddVersions = ({ closeModal, modal }) => {
                                 </div>
                             </div>
                             <div className="flex gap-3">
+
                                 <div className="md:w-1/2">
                                     <FormSelect
-                                        selectLabel="Project team"
-                                        name="projectManager"
-                                        value={formData.projectManager}
+                                        selectLabel="project"
+                                        label="project"
+                                        name="project"
+                                        value={formData.project}
                                         options={[
-                                            { value: "Manager 1", label: "Manager 1" },
-                                            { value: "Manager 2", label: "Manager 2" }
+                                            { value: "project 1", label: "project 1" },
+                                            { value: "project 2", label: "project 2" }
                                         ]}
                                         handleChange={handleChange}
                                     />
                                 </div>
+
                                 <div className="md:w-1/2">
                                     <FormSelect
-                                        selectLabel="Project"
-                                        name="project"
-                                        value={formData.project}
+                                        selectLabel="project Team"
+                                        label="project Team"
+                                        name="projectTeam"
+                                        value={formData.projectTeam}
                                         options={[
-                                            { value: "Project 1", label: "Project 1" },
-                                            { value: "Project 2", label: "Project 2" }
+                                            { value: "Manager 1", label: "Manager 1" },
+                                            { value: "Manager 2", label: "Manager 2" }
                                         ]}
                                         handleChange={handleChange}
                                     />
@@ -140,6 +145,8 @@ const AddVersions = ({ closeModal, modal }) => {
                                 <div className="md:w-1/2 flex flex-col">
                                     <label className="text-gray-900 mb-2">Start Date</label>
                                     <DatePicker
+                                        value={formData.start_date}
+
                                         selected={startDate}
                                         onChange={handleChangeStartDate}
                                         minDate={today}
@@ -148,10 +155,10 @@ const AddVersions = ({ closeModal, modal }) => {
                                 </div>
                                 <div className="md:w-1/2">
                                     <FormNumber
-                                        label="Duration (Days)"
+                                        label="duration (Days)"
                                         name="duration"
                                         value={formData.duration}
-                                        placeholder="Enter Duration"
+                                        placeholder="Enter duration"
                                         onChange={handleChange}
                                     />
                                 </div>
@@ -159,10 +166,10 @@ const AddVersions = ({ closeModal, modal }) => {
                             <div className="flex gap-3">
                                 <div className="md:w-full">
                                     <FormTextArea
-                                        label="Project Description"
+                                        label="project Description"
                                         name="description"
                                         value={formData.description}
-                                        placeholder="Enter Project Description"
+                                        placeholder="Enter project Description"
                                         onChange={handleChange}
                                     />
                                 </div>

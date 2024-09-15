@@ -1,9 +1,9 @@
 import React from 'react'
-import Car from '../carPages/Car'
+import Projects from '../projectPages/Projects'
 
 const page = () => {
     return (
-        <Car />
+        <Projects />
     )
 }
 

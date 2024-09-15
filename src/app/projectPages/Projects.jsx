@@ -1,10 +1,10 @@
 'use client'
 import React from 'react';
 import  { Suspense, useCallback, useState } from 'react'
-import CarTable from './CarTable'
-import AddCar from './AddCar';
-import PreviewCar from './PreviewCar';
- const Car = ({ role }) => {
+import ProjectsTable from './ProjectsTable'
+import AddProjects from './AddProjects';
+import PreviewProjects from './PreviewProjects';
+ const Projects = ({ role }) => {
     const [openPreview, setOpenPreview] = useState(false);
     const [openCreate, setOpenCreate] = useState(false);
     const toggleOpenCreateModal = useCallback(() => setOpenCreate(prev => !prev), []);
@@ -12,16 +12,16 @@ import PreviewCar from './PreviewCar';
  
     return (
         <div>
-            <CarTable
+            <ProjectsTable
                 openPreview={toggleOpenPreviewModal}
                 openCreate={toggleOpenCreateModal}
             />
             <Suspense fallback={<div>Loading...</div>}>
-                {openCreate && <AddCar closeModal={toggleOpenCreateModal} modal={openCreate} role={role} />}
-                {openPreview && <PreviewCar closeModal={toggleOpenPreviewModal} />}
+                {openCreate && <AddProjects closeModal={toggleOpenCreateModal} modal={openCreate} role={role} />}
+                {openPreview && <PreviewProjects closeModal={toggleOpenPreviewModal} />}
             </Suspense>
         </div>
     )
 }
 
-export default React.memo(Car)
+export default React.memo(Projects)

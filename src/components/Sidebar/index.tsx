@@ -198,12 +198,13 @@ const menuGroups = [
         route: "#",
         children: [
           { label: "Login", route: "/auth/Login" },
-          { label: "Sign Out", route: "/logOut" },
+
+          { label: "Sign Out", route: "/auth/signOut" },
         ],
       },
     ],
   },
- 
+
 ];
 
 const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {

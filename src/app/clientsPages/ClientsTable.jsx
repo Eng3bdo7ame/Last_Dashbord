@@ -1,11 +1,10 @@
-
 import { useEffect, useState, useCallback } from 'react';
 import axios from 'axios';
 import Cookies from 'js-cookie';
 import Table from '../Table';
-import AddVersion from './AddVersions'; // Ensure the path is correct
+import AddClients from './AddClients'; // Ensure the path is correct
 
-const VersionTable = ({ openPreview, openCreate }) => {
+const ClientsTable = ({ openPreview, openCreate }) => {
     const [modalType, setModalType] = useState(null);
     const [tableData, setTableData] = useState([]);
     const [tableHeaders, setTableHeaders] = useState([]);
@@ -16,43 +15,16 @@ const VersionTable = ({ openPreview, openCreate }) => {
             if (!token) {
                 console.error('No token found in cookies');
                 return;
-
-const HotelTable = ({ openCreate, openPreview }) => {
-    const [data, setData] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-
-    const headers = [
-        { key: 'version', label: 'Version' },
-        { key: 'id', label: 'Product ID' },
-        { key: 'price', label: 'Price' },
-        { key: 'quantity', label: 'Quantity' },
-        { key: 'sale', label: 'Sale' },
-        { key: 'stock', label: 'Stock' },
-        { key: 'start_date', label: 'Start Date' },
-    ];
-
-    useEffect(() => {
-        const fetchData = async () => {
-            try {
-                const token = localStorage.getItem('token');
-
-
-                 const response = await axios.get('https://dashboard.cowdly.com/api/project_versions/', {
-                    headers: {
-                        'Authorization': `Token ${token}`
-                    }
-                });
-
-                setData(response.data);
-            } catch (error) {
-                setError(error);
-            } finally {
-                setLoading(false);
-
             }
 
-          
+            const response = await axios.get('https://dashboard.cowdly.com/api/clients/', {
+                headers: {
+                    'Authorization': `Token ${token}`, // Include token in the request header
+                },
+            });
+
+            const data = response.data;
+            console.log("API Data:", data); // للتحقق من البيانات القادمة من API
 
             if (data.length > 0) {
                 // Set table headers based on keys of the first item
@@ -74,7 +46,6 @@ const HotelTable = ({ openCreate, openPreview }) => {
         }
     }, []);
 
-
     useEffect(() => {
         fetchData(); // Fetch data on component mount
     }, [fetchData]);
@@ -87,25 +58,18 @@ const HotelTable = ({ openCreate, openPreview }) => {
         fetchData(); // Refresh the data after a new client is added
     };
 
-
-    if (loading) return <div>Loading...</div>;
-    if (error) return <div>Error: {error.message}</div>;
-
-
     return (
         <div>
             <Table
-
                 data={tableData}
                 headers={tableHeaders}
                 openCreate={openCreateModal}
-
                 openPreview={openPreview}
-                addItemLabel="Version"
+                addItemLabel="Clients"
                 onDelete={() => console.log('Delete function not implemented')}
             />
             {modalType === "client" && (
-                <AddVersion
+                <AddClients
                     closeModal={() => setModalType(null)}
                     modal={modalType === "client"}
                     onClientAdded={handleClientAdded}
@@ -115,4 +79,4 @@ const HotelTable = ({ openCreate, openPreview }) => {
     );
 };
 
-export default VersionTable;
+export default ClientsTable;
