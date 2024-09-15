@@ -1,17 +1,19 @@
-import { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import axios from 'axios';
 import Cookies from 'js-cookie';
 import Table from '../Table';
-import AddClients from './AddClients'; // Ensure the path is correct
+import AddClients from './AddClients';
+import ViewClient from './PreviewClients';   
 
-const ClientsTable = ({ openPreview, openCreate }) => {
+const ClientsTable = () => {
     const [modalType, setModalType] = useState(null);
     const [tableData, setTableData] = useState([]);
     const [tableHeaders, setTableHeaders] = useState([]);
+    const [selectedClientId, setSelectedClientId] = useState(null);
 
     const fetchData = useCallback(async () => {
         try {
-            const token = Cookies.get('token'); // Retrieve token from cookies
+            const token = Cookies.get('token');
             if (!token) {
                 console.error('No token found in cookies');
                 return;
@@ -19,7 +21,7 @@ const ClientsTable = ({ openPreview, openCreate }) => {
 
             const response = await axios.get('https://dashboard.cowdly.com/api/clients/', {
                 headers: {
-                    'Authorization': `Token ${token}`, // Include token in the request header
+                    'Authorization': `Token ${token}`,
                 },
             });
 
@@ -38,12 +40,16 @@ const ClientsTable = ({ openPreview, openCreate }) => {
     }, []);
 
     useEffect(() => {
-        fetchData(); // Fetch data on component mount
+        fetchData();
     }, [fetchData]);
 
-    // Function to add the new client directly to the table without fetching
+    const openPreview = (clientId) => {
+        setModalType('preview');
+        setSelectedClientId(clientId);
+    };
+
     const addNewClientToTable = (newClient) => {
-        setTableData((prevData) => [...prevData, newClient]); // Add new client to the existing table data
+        setTableData((prevData) => [...prevData, newClient]);
     };
 
     return (
@@ -56,11 +62,19 @@ const ClientsTable = ({ openPreview, openCreate }) => {
                 addItemLabel="Clients"
                 onDelete={() => console.log('Delete function not implemented')}
             />
-            {modalType === "client" && (
+
+            {modalType === 'client' && (
                 <AddClients
                     closeModal={() => setModalType(null)}
-                    modal={modalType === "client"}
-                    onClientAdded={addNewClientToTable} // Pass the function to update the table
+                    modal={modalType === 'client'}
+                    onClientAdded={addNewClientToTable}
+                />
+            )}
+
+            {modalType === 'preview' && (
+                <ViewClient
+                    closeModal={() => setModalType(null)}
+                    clientId={selectedClientId}
                 />
             )}
         </div>
