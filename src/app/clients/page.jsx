@@ -1,9 +1,9 @@
 import React from 'react'
-import Booking from '../clientsPages/Booking'
+import Clients from '../clientsPages/Clients'
 const page = () => {
     return (
         <div>
-            <Booking />
+            <Clients />
         </div>
     )
 }
