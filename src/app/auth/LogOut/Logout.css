@@ -1,0 +1,56 @@
+.LogOutBtn {
+    width: 10vw;
+    border-radius: 10px;
+    font-weight: bold;
+    position: fixed;
+    margin: 5vh 70vw 5vh 86vw;
+    padding: 14px 0;
+    color: #fff;
+}
+
+.userName{
+    font-size: 18px;
+    width: 18vw;
+    padding: 14px 10px;
+         border: 1px solid var(--card);
+    border-radius: 10px;
+    -webkit-border-radius: 10px;
+    -moz-border-radius: 10px;
+    -ms-border-radius: 10px;
+    -o-border-radius: 10px;
+}
+
+@media only screen and (min-width: 769px) and (max-width: 1200px) {
+    .LogOutBtn {
+        margin: 5vh 84vw 5vh 85vw;
+        width: 10vw;
+    }
+}
+
+@media only screen and (max-width: 768px) {
+    .LogOutBtn {
+        width: 18vw;
+        margin: 5vh 75vw 5vh 79vw;
+    }
+}
+
+@media only screen and (max-width: 618px) {
+    .LogOutBtn {
+        width: 16vw;
+        margin: 5vh 77vw 5vh 80vw;
+    }
+}
+
+@media only screen and (max-width: 480px) {
+    .LogOutBtn {
+        width: 23vw;
+        margin: 5vh 70vw 5vh 74vw;
+    }
+
+}
+
+@media only screen and (max-width: 280px) {
+    .LogOutBtn {
+        width: 23vw;
+    }
+}

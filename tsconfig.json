@@ -29,7 +29,7 @@
     "src/app/clientsPages/AddBooking.jsx",
     "src/app/roomsPages/AddRoom.jsx",
     "src/app/requestPages/AddRequest.jsx",
-    "src/app/hotelsPages/AddHotel.jsx"
+    "src/app/veersionsPages/AddVersions.jsx"
   ],
   "exclude": ["node_modules"]
 }

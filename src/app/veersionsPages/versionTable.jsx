@@ -2,9 +2,9 @@ import { useEffect, useState, useCallback } from 'react';
 import axios from 'axios';
 import Cookies from 'js-cookie';
 import Table from '../Table';
-import AddClients from './AddClients'; // Ensure the path is correct
+import AddVersion from './AddVersions'; // Ensure the path is correct
 
-const ClientsTable = ({ openPreview, openCreate }) => {
+const VersionTable = ({ openPreview, openCreate }) => {
     const [modalType, setModalType] = useState(null);
     const [tableData, setTableData] = useState([]);
     const [tableHeaders, setTableHeaders] = useState([]);
@@ -17,7 +17,7 @@ const ClientsTable = ({ openPreview, openCreate }) => {
                 return;
             }
 
-            const response = await axios.get('https://dashboard.cowdly.com/api/clients/', {
+            const response = await axios.get('https://dashboard.cowdly.com/api/project_versions/', {
                 headers: {
                     'Authorization': `Token ${token}`, // Include token in the request header
                 },
@@ -65,11 +65,11 @@ const ClientsTable = ({ openPreview, openCreate }) => {
                 headers={tableHeaders}
                 openCreate={openCreateModal}
                 openPreview={openPreview}
-                addItemLabel="Clients"
+                addItemLabel="Version"
                 onDelete={() => console.log('Delete function not implemented')}
             />
             {modalType === "client" && (
-                <AddClients
+                <AddVersion
                     closeModal={() => setModalType(null)}
                     modal={modalType === "client"}
                     onClientAdded={handleClientAdded}
@@ -79,4 +79,4 @@ const ClientsTable = ({ openPreview, openCreate }) => {
     );
 };
 
-export default ClientsTable;
+export default VersionTable;
