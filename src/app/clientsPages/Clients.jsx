@@ -1,31 +1,17 @@
-"use client";
-import React, {
-  useCallback,
-  useState,
-  useEffect,
-  lazy,
-  Suspense,
-  useMemo,
-} from "react";
+'use client'
+import React, { useCallback, useState, useEffect, lazy, Suspense, useMemo } from "react";
 import gsap from "gsap";
 import ClientsTable from "./ClientsTable";
-import dynamic from "next/dynamic";
 
 const PreviewClients = lazy(() => import("./PreviewClients"));
 const AddClients = lazy(() => import("./AddClients"));
 
-const Clients: React.FC<{ role: string }> = ({ role }) => {
+const Clients = ({ role }) => {
   const [openPreview, setOpenPreview] = useState(false);
   const [openCreate, setOpenCreate] = useState(false);
 
-  const toggleOpenCreateModal = useCallback(
-    () => setOpenCreate((prev) => !prev),
-    [],
-  );
-  const toggleOpenPreviewModal = useCallback(
-    () => setOpenPreview((prev) => !prev),
-    [],
-  );
+  const toggleOpenCreateModal = useCallback(() => setOpenCreate(prev => !prev), []);
+  const toggleOpenPreviewModal = useCallback(() => setOpenPreview(prev => !prev), []);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -45,7 +31,7 @@ const Clients: React.FC<{ role: string }> = ({ role }) => {
     () => (
       <div className="flex flex-col flex-wrap items-center justify-between gap-4 md:flex-row lg:flex-row xl:flex-row"></div>
     ),
-    [],
+    []
   );
 
   return (
@@ -54,8 +40,8 @@ const Clients: React.FC<{ role: string }> = ({ role }) => {
         <section className="flex-1">
           {chartSection}
           <ClientsTable
-            openPreview={toggleOpenPreviewModal}
-            openCreate={toggleOpenCreateModal}
+            openPreview={toggleOpenPreviewModal} // Pass the function
+            openCreate={toggleOpenCreateModal} // Pass the function
           />
           <Suspense fallback={<div>Loading...</div>}>
             {openCreate && (

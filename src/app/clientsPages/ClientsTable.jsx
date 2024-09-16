@@ -3,9 +3,10 @@ import axios from 'axios';
 import Cookies from 'js-cookie';
 import Table from '../Table';
 import AddClients from './AddClients';
-import ViewClient from './PreviewClients';   
+import ViewClient from './PreviewClients';
+import EditClient from './EditClient';
 
-const ClientsTable = () => {
+const ClientsTable = ({ openPreview, openCreate }) => {
     const [modalType, setModalType] = useState(null);
     const [tableData, setTableData] = useState([]);
     const [tableHeaders, setTableHeaders] = useState([]);
@@ -14,28 +15,21 @@ const ClientsTable = () => {
     const fetchData = useCallback(async () => {
         try {
             const token = Cookies.get('token');
-            if (!token) {
-                console.error('No token found in cookies');
-                return;
-            }
-
             const response = await axios.get('https://dashboard.cowdly.com/api/clients/', {
                 headers: {
                     'Authorization': `Token ${token}`,
                 },
             });
-
-            const data = response.data;
-            if (data.length > 0) {
-                const headers = Object.keys(data[0]);
-                setTableHeaders(headers.map(header => ({ key: header, label: header })));
-                setTableData(data);
-            } else {
-                setTableHeaders([]);
-                setTableData([]);
+            if (response.data.length > 0) {
+                const headers = Object.keys(response.data[0]).map(key => ({
+                    key,
+                    label: key.charAt(0).toUpperCase() + key.slice(1),
+                }));
+                setTableHeaders(headers);
+                setTableData(response.data);
             }
         } catch (error) {
-            console.error('Error fetching data:', error.response?.data || error.message);
+            console.error('Error fetching data:', error);
         }
     }, []);
 
@@ -43,13 +37,43 @@ const ClientsTable = () => {
         fetchData();
     }, [fetchData]);
 
-    const openPreview = (clientId) => {
-        setModalType('preview');
+    const openEdit = (clientId) => {
+        setModalType('edit');
         setSelectedClientId(clientId);
     };
 
     const addNewClientToTable = (newClient) => {
-        setTableData((prevData) => [...prevData, newClient]);
+        setTableData(prevData => [...prevData, newClient]);
+    };
+
+    const handleClientUpdate = (updatedClient) => {
+        setTableData(prevData =>
+            prevData.map(client =>
+                client.id === updatedClient.id ? updatedClient : client
+            )
+        );
+    };
+
+    const openCreateModal = () => {
+        setModalType('client');
+    };
+
+    const handleDelete = async (clientId) => {
+        try {
+            const token = Cookies.get('token');
+            await axios.delete(`https://dashboard.cowdly.com/api/clients/${clientId}/`, {
+                headers: {
+                    'Authorization': `Token ${token}`,
+                },
+            });
+            setTableData(prevData => prevData.filter(client => client.id !== clientId));
+        } catch (error) {
+            console.error('Error deleting client:', error);
+        }
+    };
+
+    const handleClientAdded = (newClient) => {
+        addNewClientToTable(newClient);
     };
 
     return (
@@ -57,25 +81,26 @@ const ClientsTable = () => {
             <Table
                 data={tableData}
                 headers={tableHeaders}
-                openCreate={() => setModalType('client')}
+                openCreate={openCreateModal} // Pass function to open create modal
                 openPreview={openPreview}
+                openEdit={openEdit}
                 addItemLabel="Clients"
-                onDelete={() => console.log('Delete function not implemented')}
+                onDelete={handleDelete}
             />
 
-            {modalType === 'client' && (
+            {modalType === "client" && (
                 <AddClients
                     closeModal={() => setModalType(null)}
-                    modal={modalType === 'client'}
-                    onClientAdded={addNewClientToTable}
+                    modal={modalType === "client"}
+                    onClientAdded={handleClientAdded}
                 />
             )}
 
             {modalType === 'preview' && (
-                <ViewClient
-                    closeModal={() => setModalType(null)}
-                    clientId={selectedClientId}
-                />
+                <ViewClient closeModal={() => setModalType(null)} clientId={selectedClientId} />
+            )}
+            {modalType === 'edit' && (
+                <EditClient closeModal={() => setModalType(null)} clientId={selectedClientId} onClientUpdated={handleClientUpdate} />
             )}
         </div>
     );

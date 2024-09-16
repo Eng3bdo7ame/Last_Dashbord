@@ -122,7 +122,7 @@ function ViewClient({ closeModal, clientId }) {
                                 </div>
                             </div>
 
-                            {/* Address Field */}
+                             
                             <div className="flex justify-between items-center gap-3 mt-3">
                                 <div className="w-full">
                                     <FormText
