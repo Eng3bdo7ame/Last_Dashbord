@@ -38,8 +38,7 @@ const AddClients = ({ closeModal, modal, onClientAdded }) => {
             });
 
             const newClient = response.data;
-            console.log('Client added successfully:', newClient);
-            onClientAdded(newClient); // Pass the new client data to the parent component
+             onClientAdded(newClient); // Pass the new client data to the parent component
             closeModal(); // Close the modal on successful submission
 
         } catch (error) {
