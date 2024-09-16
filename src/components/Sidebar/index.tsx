@@ -166,8 +166,46 @@ const menuGroups = [
             </g>
           </svg>
         ),
-        label: "Renting",
-        route: "/renting",
+        label: "Human Resources",
+        route: "/HumanResources",
+      },
+
+      {
+        icon: (
+          <svg
+            className="fill-current"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <g fill="currentColor">
+              <path d="M4 7C4 6.45 4.45 6 5 6H19C19.55 6 20 6.45 20 7V10.5H22.5C22.85 10.5 23.18 10.6 23.5 10.75C23.91 10.91 24 11.31 24 11.5C24 11.69 23.91 12.09 23.5 12.25C23.18 12.4 22.85 12.5 22.5 12.5H21V14.5H22C22.55 14.5 23 14.95 23 15.5C23 16.05 22.55 16.5 22 16.5H20.5V18.5H18.5V16.5H13V18.5H11V16.5H8.5V18.5H6.5V16.5H5C4.45 16.5 4 16.05 4 15.5C4 14.95 4.45 14.5 5 14.5H6V12.5H4.5C4.22 12.5 4 12.28 4 12V10.5H2.5C2.16 10.5 1.83 10.4 1.5 10.25C1.09 10.09 1 9.69 1 9.5C1 9.31 1.09 8.91 1.5 8.75C1.83 8.6 2.16 8.5 2.5 8.5H3.5V7.5C3.5 7.22 3.72 7 4 7ZM5 10H19V8H5V10ZM19 15.5H5V14.5H19V15.5ZM17 14.5H7V16.5H17V14.5ZM19.5 18H18V16H19.5V18Z" />
+            </g>
+          </svg>
+        ),
+        label: "Sections",
+        route: "/Sections",
+      },
+
+      {
+        icon: (
+          <svg
+            className="fill-current"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <g fill="currentColor">
+              <path d="M4 7C4 6.45 4.45 6 5 6H19C19.55 6 20 6.45 20 7V10.5H22.5C22.85 10.5 23.18 10.6 23.5 10.75C23.91 10.91 24 11.31 24 11.5C24 11.69 23.91 12.09 23.5 12.25C23.18 12.4 22.85 12.5 22.5 12.5H21V14.5H22C22.55 14.5 23 14.95 23 15.5C23 16.05 22.55 16.5 22 16.5H20.5V18.5H18.5V16.5H13V18.5H11V16.5H8.5V18.5H6.5V16.5H5C4.45 16.5 4 16.05 4 15.5C4 14.95 4.45 14.5 5 14.5H6V12.5H4.5C4.22 12.5 4 12.28 4 12V10.5H2.5C2.16 10.5 1.83 10.4 1.5 10.25C1.09 10.09 1 9.69 1 9.5C1 9.31 1.09 8.91 1.5 8.75C1.83 8.6 2.16 8.5 2.5 8.5H3.5V7.5C3.5 7.22 3.72 7 4 7ZM5 10H19V8H5V10ZM19 15.5H5V14.5H19V15.5ZM17 14.5H7V16.5H17V14.5ZM19.5 18H18V16H19.5V18Z" />
+            </g>
+          </svg>
+        ),
+        label: "Human Resources",
+        route: "/HumanResources",
       },
     ],
   },
@@ -204,7 +242,6 @@ const menuGroups = [
       },
     ],
   },
-
 ];
 
 const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {

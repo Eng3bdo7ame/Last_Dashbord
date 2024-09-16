@@ -1,9 +1,9 @@
 import React from 'react'
-import Hotel from '../veersionsPages/Version'
+import Version from '../veersionsPages/Version'
 
 const page = () => {
     return (
-        <Hotel />
+        <Version />
     )
 }
 

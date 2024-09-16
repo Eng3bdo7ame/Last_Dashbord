@@ -1,22 +1,23 @@
 'use client';
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { X } from "@phosphor-icons/react";
 import axios from "axios";
+import Cookies from 'js-cookie';
+import { format } from 'date-fns';
 import FormText from "../../form/FormText";
 import FormNumber from "../../form/FormNumber";
 import FormTextArea from "../../form/FormTextArea";
 import FormSelect from "../../form/FormSelect";
 
-const AddVersions = ({ closeModal, modal }) => {
+const AddVersions = ({ closeModal, modal, onVersionAdded }) => {
     const [formData, setFormData] = useState({
         name: "",
         budget: "",
         start_date: "",
         duration: "",
         project: "",
-        projectTeam: "",
         description: "",
     });
 
@@ -30,31 +31,65 @@ const AddVersions = ({ closeModal, modal }) => {
             setEndDate(date);
         }
         setStartDate(date);
+        setFormData(prevData => ({
+            ...prevData,
+            start_date: format(date, 'yyyy-MM-dd')
+        }));
     };
 
     const handleChange = useCallback((e) => {
-        const { name, value } = e.target;
+        const { name, value, type, checked } = e.target;
         setFormData(prevData => ({
             ...prevData,
-            [name]: value,
+            [name]: type === 'checkbox' ? checked : value,
         }));
+    }, []);
+
+    const [projects, setProjects] = useState([]);
+
+    useEffect(() => {
+        const fetchProjects = async () => {
+            try {
+                const token = Cookies.get('token');
+                const response = await axios.get('https://dashboard.cowdly.com/api/projects/', {
+                    headers: {
+                        'Authorization': `Token ${token}`,
+                    },
+                });
+
+                setProjects(response.data);
+            } catch (error) {
+                console.error("Error fetching projects:", error);
+            }
+        };
+
+        fetchProjects();
     }, []);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setLoading(true);
-
-        const versionData = {
-            ...formData,
-            startDate, // include the selected start date
-            endDate,   // include the end date
-        };
 
         try {
-            const response = await axios.post("https://dashboard.cowdly.com/api/project_versions/", versionData);
-            console.log("Version added successfully:", response.data);
+            const token = Cookies.get('token');
+            if (!token) {
+                console.error('No token found in cookies');
+                return;
+            }
+
+            setLoading(true);
+            const response = await axios.post('https://dashboard.cowdly.com/api/project_versions/', formData, {
+                headers: {
+                    'Authorization': `Token ${token}`,
+                },
+            });
+
+            const newVersion = response.data;
+            console.log('Version added successfully:', newVersion);
+            if (onVersionAdded) onVersionAdded(); // Call the function to refresh data
+            closeModal();
+
         } catch (error) {
-            console.error("Error adding version:", error);
+            console.error('Error adding project version:', error.response?.data || error.message);
         } finally {
             setLoading(false);
         }
@@ -112,32 +147,25 @@ const AddVersions = ({ closeModal, modal }) => {
                                 </div>
                             </div>
                             <div className="flex gap-3">
-
                                 <div className="md:w-1/2">
                                     <FormSelect
-                                        selectLabel="project"
-                                        label="project"
-                                        name="project"
+                                        label="Project"
                                         value={formData.project}
-                                        options={[
-                                            { value: "project 1", label: "project 1" },
-                                            { value: "project 2", label: "project 2" }
-                                        ]}
-                                        handleChange={handleChange}
+                                        name="project"
+                                        onChange={handleChange}
+                                        options={projects.map(project => ({
+                                            value: project.id,
+                                            label: project.name
+                                        }))}
                                     />
                                 </div>
-
                                 <div className="md:w-1/2">
                                     <FormSelect
-                                        selectLabel="project Team"
-                                        label="project Team"
+                                        label="Project Team"
                                         name="projectTeam"
                                         value={formData.projectTeam}
-                                        options={[
-                                            { value: "Manager 1", label: "Manager 1" },
-                                            { value: "Manager 2", label: "Manager 2" }
-                                        ]}
-                                        handleChange={handleChange}
+                                        onChange={handleChange}
+                                        options={[{ value: "Manager 1", label: "Manager 1" }, { value: "Manager 2", label: "Manager 2" }]}
                                     />
                                 </div>
                             </div>
@@ -145,8 +173,6 @@ const AddVersions = ({ closeModal, modal }) => {
                                 <div className="md:w-1/2 flex flex-col">
                                     <label className="text-gray-900 mb-2">Start Date</label>
                                     <DatePicker
-                                        value={formData.start_date}
-
                                         selected={startDate}
                                         onChange={handleChangeStartDate}
                                         minDate={today}
@@ -155,40 +181,33 @@ const AddVersions = ({ closeModal, modal }) => {
                                 </div>
                                 <div className="md:w-1/2">
                                     <FormNumber
-                                        label="duration (Days)"
+                                        label="Duration (Days)"
                                         name="duration"
                                         value={formData.duration}
-                                        placeholder="Enter duration"
+                                        placeholder="Enter Duration"
+                                        required
                                         onChange={handleChange}
                                     />
                                 </div>
                             </div>
-                            <div className="flex gap-3">
-                                <div className="md:w-full">
-                                    <FormTextArea
-                                        label="project Description"
-                                        name="description"
-                                        value={formData.description}
-                                        placeholder="Enter project Description"
-                                        onChange={handleChange}
-                                    />
-                                </div>
+                            <div className="flex flex-col gap-3">
+                                <FormTextArea
+                                    label="Description"
+                                    name="description"
+                                    value={formData.description}
+                                    placeholder="Enter Description"
+                                    rows={4}
+                                    onChange={handleChange}
+                                />
                             </div>
                         </div>
-                        <div className="flex justify-center items-start gap-2 mt-5">
+                        <div className="flex justify-end mt-4 px-4">
                             <button
                                 type="submit"
-                                className={`px-4 py-2 bg-green-700 text-white rounded-lg shadow-md hover:bg-green-800 ${loading ? 'opacity-50' : ''}`}
+                                className="bg-green-700 text-white px-4 py-2 rounded-lg flex items-center gap-2"
                                 disabled={loading}
                             >
-                                {loading ? 'Adding...' : 'Add New'}
-                            </button>
-                            <button
-                                type="button"
-                                className="px-4 py-2 bg-red-600 text-white rounded-lg shadow-md hover:bg-red-700"
-                                onClick={closeModal}
-                            >
-                                Cancel
+                                {loading ? 'Saving...' : 'Save'}
                             </button>
                         </div>
                     </form>

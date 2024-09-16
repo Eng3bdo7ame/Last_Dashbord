@@ -1,14 +1,20 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { IoCloseOutline } from "react-icons/io5";
 import { FaRegEdit, FaPlus, FaBold, FaItalic, FaUnderline, FaLink, FaImage } from "react-icons/fa";
 import { LuClock } from "react-icons/lu";
 import { format } from 'date-fns';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
+import FormSelect from "../../form/FormSelect";
+import FormNumber from '@/form/FormNumber';
 
 const EditTaskForm = ({ card, onClose, onSave }) => {
     const [title, setTitle] = useState('');
     const [dueDate, setDueDate] = useState(null);
     const [label, setLabel] = useState('');
     const [comment, setComment] = useState('');
+
+    const formRef = useRef(null); // Create a ref for the form container
 
     useEffect(() => {
         if (card) {
@@ -19,9 +25,14 @@ const EditTaskForm = ({ card, onClose, onSave }) => {
         }
     }, [card]);
 
+    useEffect(() => {
+        if (formRef.current) {
+            formRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' }); // Scroll to the bottom
+        }
+    }, [title, dueDate, label, comment]); // Update the dependency array based on form state
+
     const handleSubmit = (e) => {
         e.preventDefault();
-        // Call onSave with updated card data
         onSave({
             ...card,
             title,
@@ -31,8 +42,20 @@ const EditTaskForm = ({ card, onClose, onSave }) => {
         });
     };
 
+    const today = new Date();
+    const [startDate, setStartDate] = useState(today);
+    const [endDate, setEndDate] = useState(today);
+    const [loading, setLoading] = useState(false);
+
+    const handleChangeStartDate = (date) => {
+        if (date && date > endDate) {
+            setEndDate(date);
+        }
+        setStartDate(date);
+    };
+
     return (
-        <div className="w-full mx-auto bg-white shadow-lg rounded-lg overflow-hidden">
+        <div className="w-full mx-auto bg-white shadow-lg rounded-lg">
             <div className="px-6 py-4 bg-border-b flex justify-between items-center">
                 <h2 className="text-2xl font-semibold text-gray-800">Edit Task</h2>
                 <button
@@ -43,7 +66,7 @@ const EditTaskForm = ({ card, onClose, onSave }) => {
                 </button>
             </div>
 
-            <div className="px-6 py-4">
+            <div className="px-6 py-4" ref={formRef}> {/* Attach the ref here */}
                 <div className="flex mb-6 border-b">
                     <button className="px-4 py-2 font-medium text-blue-600 border-b-2 border-blue-600">
                         <FaRegEdit size={20} className="inline mr-2" />
@@ -66,30 +89,24 @@ const EditTaskForm = ({ card, onClose, onSave }) => {
                         />
                     </div>
 
-                    <div>
-                        <div>
-                            <button
-                                type="button"
-                                className={`w-full justify-start text-left font-normal ${!dueDate && "text-muted-foreground"}`}
-                            >
-                                {dueDate ? format(dueDate, "d MMMM, yyyy") : <span>Due Date</span>}
-                            </button>
-                            {/* Replace with your calendar component */}
-                            {/* <Calendar
-                                mode="single"
-                                selected={dueDate}
-                                onSelect={setDueDate}
-                                initialFocus
-                            /> */}
-                        </div>
+                    <div className="md:w-full flex flex-col">
+                        <label className="text-gray-900 mb-2">Start Date</label>
+                        <DatePicker
+                            selected={startDate}
+                            onChange={handleChangeStartDate}
+                            minDate={today}
+                            className="inputDate bg-gray-100 w-full p-2 rounded-lg"
+                        />
                     </div>
 
                     <div>
-                        <select value={label} onChange={(e) => setLabel(e.target.value)}>
-                            <option value="App">App</option>
-                            <option value="Website">Website</option>
-                            <option value="Server">Server</option>
-                        </select>
+                        <FormSelect
+                            label="Project"
+                            value="1"
+                            name="project"
+                            // onChange={handleChange}
+                            options={[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
+                        />
                     </div>
 
                     <div>
