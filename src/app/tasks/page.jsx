@@ -8,7 +8,7 @@ import { FaUserCircle } from 'react-icons/fa';
 import { CiMenuKebab } from 'react-icons/ci';
 
 const boardId = 1;
-const defaultApiUrl = `wss://dashboard.cowdly.com/ws/kanban/boards/`;
+const defaultApiUrl = `https://dashboard.cowdly.com/api/kanban/boards/1/`;
 const boardSocketUrl = `wss://dashboard.cowdly.com/ws/boards/${boardId}/`;
 
 const DraggableBoard = () => {
@@ -25,10 +25,11 @@ const DraggableBoard = () => {
             try {
                 const response = await fetch(defaultApiUrl);
                 const data = await response.json();
-                if (data.board_data) {
-                    console.log('Default board data received:', data.board_data);
-                    setColumnsData(data.board_data.lists);
-                    localStorage.setItem('boardData', JSON.stringify(data.board_data.lists));
+                console.log('object',data)
+                if (data.lists) {
+                    console.log('Default board data received:', data.lists);
+                    setColumnsData(data.lists);
+                    localStorage.setItem('boardData', JSON.stringify(data.lists));
                 } else {
                     console.warn('No board_data in the fetched response');
                 }
