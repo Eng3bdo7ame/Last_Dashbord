@@ -1,15 +1,83 @@
-"use client";
+'use client';
+
+const boardId = 1;
+const socket = new WebSocket(
+    `wss://dashboard.cowdly.com/ws/boards/${boardId}/`
+);
+
+const boardData = {
+    action: "update_board",
+    board: {
+        lists: [
+            {
+                name: "To Do",
+                description: "Tasks to be done",
+                tasks: [
+                    { title: "Task 1", description: "Description 1", priority: "medium" },
+                    { title: "Task 2", description: "Description 2", priority: "high" },
+                ],
+            },
+            {
+                name: "In Progress",
+                description: "Tasks in progress",
+                tasks: [
+                    { title: "Task 3", description: "Description 3", priority: "low" },
+                ],
+            },
+        ],
+    },
+};
+
+socket.onopen = function () {
+    console.log("Connected to WebSocket server");
+    try {
+        socket.send(JSON.stringify(boardData));
+    } catch (error) {
+        console.error("Error sending data:", error);
+    }
+};
+
+socket.onmessage = function (event) {
+    try {
+        const data = JSON.parse(event.data);
+        if (data.board_data) {
+            console.log("Board updated:", data.board_data);
+        } else {
+            console.warn("No board_data in the received message");
+        }
+    } catch (error) {
+        console.error("Error parsing message data:", error);
+    }
+};
+
+socket.onerror = function (error) {
+    console.error("WebSocket Error:", error.message || error);
+    if (error.reason) {
+        console.error("Error reason:", error.reason);
+    }
+    if (error.code) {
+        console.error("Error code:", error.code);
+    }
+};
+
+socket.onclose = function (event) {
+    console.log("WebSocket closed:", event.reason || "No reason provided");
+};
+
+// React component with draggable columns and cards
+ 
 import "../../css/taskes.css";
-import React, { useEffect, useState } from 'react';
-import Sortable from 'sortablejs';
+import React, { useEffect, useState } from "react";
+import Sortable from "sortablejs";
 import { GoPaperclip } from "react-icons/go";
 import { BiMessageSquareDetail } from "react-icons/bi";
 import { FaUserCircle } from "react-icons/fa";
-import EditTaskForm from './updateTask'; // تأكد من المسار الصحيح لمكون نموذج التعديل
-import Image from 'next/image';
+import EditTaskForm from "./updateTask"; // Update with the correct path to your edit form component
+import Image from "next/image";
 import { CiMenuKebab } from "react-icons/ci";
-import { RiDeleteBin7Line } from 'react-icons/ri';
+import { RiDeleteBin7Line } from "react-icons/ri";
 
+// Initial column data for the board
 const initialColumnsData = [
     {
         title: "In Progress",
@@ -20,7 +88,7 @@ const initialColumnsData = [
                 title: "Research FAQ page UX",
                 attachments: 4,
                 comments: 12,
-                users: [1, 2, 3]
+                users: [1, 2, 3],
             },
             {
                 label: "Code Review",
@@ -28,9 +96,9 @@ const initialColumnsData = [
                 title: "Review Javascript code",
                 attachments: 2,
                 comments: 8,
-                users: [4, 5]
+                users: [4, 5],
             },
-        ]
+        ],
     },
     {
         title: "In Review",
@@ -41,7 +109,7 @@ const initialColumnsData = [
                 title: "Review completed Apps",
                 attachments: 8,
                 comments: 17,
-                users: [6, 7]
+                users: [6, 7],
             },
             {
                 label: "Images",
@@ -50,9 +118,9 @@ const initialColumnsData = [
                 attachments: 10,
                 comments: 18,
                 image: "/placeholder.svg", // Placeholder image
-                users: [1, 2, 3, 4]
+                users: [1, 2, 3, 4],
             },
-        ]
+        ],
     },
     {
         title: "Done",
@@ -63,7 +131,7 @@ const initialColumnsData = [
                 title: "Forms & Tables section",
                 attachments: 1,
                 comments: 4,
-                users: [8, 9, 10]
+                users: [8, 9, 10],
             },
             {
                 label: "Charts & Maps",
@@ -71,58 +139,55 @@ const initialColumnsData = [
                 title: "Completed Charts & Maps",
                 attachments: 6,
                 comments: 21,
-                users: [11]
+                users: [11],
             },
-        ]
+        ],
     },
 ];
 
 const DraggableBoard = () => {
     const [columnsData, setColumnsData] = useState(() => {
-        const savedData = localStorage.getItem('columnsData');
+        const savedData = localStorage.getItem("columnsData");
         return savedData ? JSON.parse(savedData) : initialColumnsData;
     });
 
     const [showForm, setShowForm] = useState(false);
-    const [newColumnName, setNewColumnName] = useState('');
-    const [newCardName, setNewCardName] = useState('');
+    const [newColumnName, setNewColumnName] = useState("");
+    const [newCardName, setNewCardName] = useState("");
     const [showCardForm, setShowCardForm] = useState(null);
     const [selectedCard, setSelectedCard] = useState(null);
+    const [showMenuIndex, setShowMenuIndex] = useState(null); // For toggling menu
 
     useEffect(() => {
-        localStorage.setItem('columnsData', JSON.stringify(columnsData));
+        localStorage.setItem("columnsData", JSON.stringify(columnsData));
     }, [columnsData]);
 
     useEffect(() => {
-        const columnContainers = document.querySelectorAll('.draggable-board');
+        const columnContainers = document.querySelectorAll(".draggable-board");
 
-        columnContainers.forEach(container => {
+        columnContainers.forEach((container) => {
             new Sortable(container, {
-                group: 'columns', // Group for columns
+                group: "columns", // Group for columns
                 animation: 150,
                 onEnd: handleColumnEnd, // Handle column drag end
             });
         });
 
-        const cardContainers = document.querySelectorAll('.draggable-column');
+        const cardContainers = document.querySelectorAll(".draggable-column");
 
-        cardContainers.forEach(container => {
+        cardContainers.forEach((container) => {
             new Sortable(container, {
-                group: 'shared', // Group for cards
-                draggable: '.draggable-card',
+                group: "shared", // Group for cards
+                draggable: ".draggable-card",
                 animation: 150,
                 onEnd: handleCardEnd, // Handle card drag end
             });
         });
     }, [columnsData]);
 
-
-    const [showMenuIndex, setShowMenuIndex] = useState(null); // للتحكم بظهور القائمة
-
     const toggleMenu = (index) => {
-        setShowMenuIndex(showMenuIndex === index ? null : index); // إظهار/إخفاء القائمة
+        setShowMenuIndex(showMenuIndex === index ? null : index); // Toggle menu visibility
     };
-
 
     const handleColumnEnd = (evt) => {
         const updatedColumns = [...columnsData];
@@ -137,7 +202,10 @@ const DraggableBoard = () => {
             const destinationColumnIndex = Array.from(evt.to.parentNode.children).indexOf(evt.to);
 
             const updatedColumns = [...columnsData];
-            const [movedCard] = updatedColumns[sourceColumnIndex].items.splice(evt.oldIndex, 1);
+            const [movedCard] = updatedColumns[sourceColumnIndex].items.splice(
+                evt.oldIndex,
+                1
+            );
             updatedColumns[destinationColumnIndex].items.splice(evt.newIndex, 0, movedCard);
             setColumnsData(updatedColumns);
         }
@@ -147,11 +215,11 @@ const DraggableBoard = () => {
         if (newColumnName.trim()) {
             const newColumn = {
                 title: newColumnName,
-                items: []
+                items: [],
             };
             setColumnsData([...columnsData, newColumn]);
             setShowForm(false);
-            setNewColumnName('');
+            setNewColumnName("");
         }
     };
 
@@ -163,12 +231,12 @@ const DraggableBoard = () => {
                 title: newCardName,
                 attachments: 0,
                 comments: 0,
-                users: []
+                users: [],
             };
             const updatedColumns = [...columnsData];
             updatedColumns[colIndex].items.push(newCard);
             setColumnsData(updatedColumns);
-            setNewCardName('');
+            setNewCardName("");
             setShowCardForm(null);
         }
     };
@@ -178,27 +246,31 @@ const DraggableBoard = () => {
     };
 
     const handleSaveCard = (updatedCard) => {
-        const updatedColumns = columnsData.map(column => ({
+        const updatedColumns = columnsData.map((column) => ({
             ...column,
-            items: column.items.map(item => (item === selectedCard ? updatedCard : item))
+            items: column.items.map((item) =>
+                item === selectedCard ? updatedCard : item
+            ),
         }));
         setColumnsData(updatedColumns);
         setSelectedCard(null);
     };
 
     return (
-        <div className=''>
+        <div className="">
             <div className="draggable-board flex overflow-x-auto space-x-4 p-8">
                 {columnsData.map((column, colIndex) => (
                     <div key={colIndex} className="min-w-[260px]">
                         <div className="flex justify-between items-center mb-3 relative">
-                            <h3 className="text-[1.125rem] font-medium text-[#3b4056]">{column.title}</h3>
+                            <h3 className="text-[1.125rem] font-medium text-[#3b4056]">
+                                {column.title}
+                            </h3>
                             <CiMenuKebab
                                 className="text-black cursor-pointer"
                                 onClick={() => toggleMenu(colIndex)}
                             />
 
-                            {/* القائمة المنسدلة */}
+                            {/* Dropdown menu */}
                             {showMenuIndex === colIndex && (
                                 <div className="absolute top-8 right-0 bg-white border rounded-lg shadow-lg z-10 w-36">
                                     <div className="menu flex flex-col py-2 px-3">
@@ -210,53 +282,37 @@ const DraggableBoard = () => {
                                                 </div>
                                             </a>
                                         </div>
-                                        <div className="menu-item">
-                                            <a className="menu-link" href="#">
-                                                <span className="menu-title">Menu link 2</span>
-                                            </a>
-                                        </div>
-                                        <div className="menu-item">
-                                            <a className="menu-link" href="#">
-                                                <span className="menu-title">Menu link 3</span>
-                                            </a>
-                                        </div>
-                                        <div className="menu-item">
-                                            <a className="menu-link" href="#">
-                                                <span className="menu-title">Menu link 4</span>
-                                            </a>
-                                        </div>
                                     </div>
                                 </div>
                             )}
                         </div>
-                        <div className="draggable-column space-y-4">
-                            {column.items.map((item, itemIndex) => (
+
+                        {/* Draggable column for tasks */}
+                        <div className="draggable-column space-y-3">
+                            {column.items.map((item, cardIndex) => (
                                 <div
-                                    key={itemIndex}
-                                    className="draggable-card p-4 bg-white rounded-lg shadow-lg shadow-gray-300 cursor-move"
+                                    key={cardIndex}
+                                    className="bg-white p-4 rounded-lg draggable-card shadow cursor-pointer"
                                     onClick={() => handleCardClick(item)}
                                 >
-                                    <span className={`inline-block px-2 py-1 text-sm font-medium ${item.labelColor} rounded-full mb-2`}>
+                                    <div className={`inline-block px-2 py-1 text-sm rounded-md ${item.labelColor}`}>
                                         {item.label}
-                                    </span>
-                                    {item.image && (
-                                        <div className="mb-4">
-                                            <Image src={item.image} alt={item.title} width={200} height={200} className="rounded-lg w-full" />
+                                    </div>
+                                    <h4 className="font-medium mt-2 text-lg">{item.title}</h4>
+
+                                    {/* Task Info */}
+                                    <div className="mt-4 flex justify-between items-center">
+                                        <div className="flex items-center space-x-1">
+                                            <GoPaperclip />
+                                            <span>{item.attachments}</span>
                                         </div>
-                                    )}
-                                    <h4 className="text-[.9375rem] font-medium mb-2">{item.title}</h4>
-                                    <div className="flex justify-between items-center text-sm text-gray-500">
-                                        <div className="flex items-center space-x-4">
-                                            <span className="text-lg flex items-center">
-                                                <GoPaperclip className="mr-1" /> {item.attachments}
-                                            </span>
-                                            <span className="text-lg  flex items-center">
-                                                <BiMessageSquareDetail className="mr-1" /> {item.comments}
-                                            </span>
+                                        <div className="flex items-center space-x-1">
+                                            <BiMessageSquareDetail />
+                                            <span>{item.comments}</span>
                                         </div>
-                                        <div className="flex -space-x-2">
-                                            {item.users.map((user, userIndex) => (
-                                                <FaUserCircle key={userIndex} className="w-5 h-5 text-gray-400" />
+                                        <div className="flex items-center space-x-1">
+                                            {item.users.map((user, index) => (
+                                                <FaUserCircle key={index} />
                                             ))}
                                         </div>
                                     </div>
@@ -264,79 +320,70 @@ const DraggableBoard = () => {
                             ))}
                         </div>
 
-                        <button
-                            className="mt-4 text-lg text-gray-500 rounded-lg px-4 py-2"
-                            onClick={() => setShowCardForm(colIndex)}
-                        >
-                            + Add New Item
-                        </button>
-
+                        {/* Form for adding new card */}
                         {showCardForm === colIndex && (
-                            <div className="mt-4">
+                            <div className="mt-2">
                                 <input
                                     type="text"
-                                    placeholder="Enter card name"
+                                    placeholder="New card name"
                                     value={newCardName}
                                     onChange={(e) => setNewCardName(e.target.value)}
-                                    className="border border-gray-300 rounded-lg px-4 py-2 w-full text-xl"
+                                    className="border border-gray-300 rounded-md p-2 w-full"
                                 />
-                                <div className="mt-4">
-                                    <button
-                                        className="bg-green-500 text-white rounded-lg text-xl px-4 py-2 mr-4"
-                                        onClick={() => handleAddNewCard(colIndex)}
-                                    >
-                                        Confirm
-                                    </button>
-                                    <button
-                                        className="bg-red-500 text-white rounded-lg text-xl px-4 py-2"
-                                        onClick={() => setShowCardForm(null)}
-                                    >
-                                        Cancel
-                                    </button>
-                                </div>
+                                <button
+                                    onClick={() => handleAddNewCard(colIndex)}
+                                    className="bg-blue-500 text-white rounded-md p-2 mt-2 w-full"
+                                >
+                                    Add Card
+                                </button>
                             </div>
                         )}
+
+                        {/* Button for showing card form */}
+                        <button
+                            onClick={() => setShowCardForm(colIndex)}
+                            className="bg-blue-500 text-white rounded-md p-2 mt-2 w-full"
+                        >
+                            Add New Card
+                        </button>
                     </div>
                 ))}
 
-                <div className="min-w-[260px] flex items-center justify-center">
-                    {showForm ? (
-                        <div className="">
-                            <input
-                                type="text"
-                                placeholder="Enter column name"
-                                value={newColumnName}
-                                onChange={(e) => setNewColumnName(e.target.value)}
-                                className="border border-gray-300 rounded-lg px-4 py-2 w-full text-xl"
-                            />
-                            <div className="mt-4">
-                                <button
-                                    className="bg-green-500 text-white rounded-lg text-xl px-4 py-2 mr-4"
-                                    onClick={handleAddNewColumn}
-                                >
-                                    Add Column
-                                </button>
-                                <button
-                                    className="bg-red-500 text-white rounded-lg text-xl px-4 py-2"
-                                    onClick={() => setShowForm(false)}
-                                >
-                                    Cancel
-                                </button>
-                            </div>
-                        </div>
-                    ) : (
+                {/* Form for adding new column */}
+                {showForm ? (
+                    <div className="min-w-[260px] p-8">
+                        <input
+                            type="text"
+                            placeholder="New column name"
+                            value={newColumnName}
+                            onChange={(e) => setNewColumnName(e.target.value)}
+                            className="border border-gray-300 rounded-md p-2 w-full"
+                        />
                         <button
-                            className="text-lg text-gray-500 rounded-lg px-4 py-2"
-                            onClick={() => setShowForm(true)}
+                            onClick={handleAddNewColumn}
+                            className="bg-blue-500 text-white rounded-md p-2 mt-2 w-full"
                         >
-                            + Add New Column
+                            Add Column
                         </button>
-                    )}
-                </div>
+                    </div>
+                ) : (
+                    
+                     <button
+                            onClick={() => setShowForm(true)}
+                            className="bg-blue-500 text-white rounded-md h-fit p-2 mt-10 w-full"
+                        >
+                            Add New Column
+                        </button>
+                )}
             </div>
 
+            {/* Modal for editing card */}
             {selectedCard && (
-                <EditTaskForm card={selectedCard} onSave={handleSaveCard} onCancel={() => setSelectedCard(null)} />
+                <EditTaskForm
+                    card={selectedCard}
+                    onSave={handleSaveCard}
+                    onCancel={() => setSelectedCard(null)}
+                />
             )}
         </div>
     );
