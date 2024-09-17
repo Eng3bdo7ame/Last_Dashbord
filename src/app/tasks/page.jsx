@@ -1,5 +1,5 @@
 "use client";
-import "../../css/taskes.css";
+import "../../css/taskes.css"
 import React, { useEffect, useState } from 'react';
 import Sortable from 'sortablejs';
 import { GoPaperclip } from "react-icons/go";
