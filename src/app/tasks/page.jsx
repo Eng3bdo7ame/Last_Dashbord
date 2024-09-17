@@ -1,10 +1,14 @@
 "use client";
+import "../../css/taskes.css";
 import React, { useEffect, useState } from 'react';
 import Sortable from 'sortablejs';
 import { GoPaperclip } from "react-icons/go";
 import { BiMessageSquareDetail } from "react-icons/bi";
 import { FaUserCircle } from "react-icons/fa";
 import EditTaskForm from './updateTask'; // تأكد من المسار الصحيح لمكون نموذج التعديل
+import Image from 'next/image';
+import { CiMenuKebab } from "react-icons/ci";
+import { RiDeleteBin7Line } from 'react-icons/ri';
 
 const initialColumnsData = [
     {
@@ -90,19 +94,54 @@ const DraggableBoard = () => {
     }, [columnsData]);
 
     useEffect(() => {
-        const containers = document.querySelectorAll('.draggable-column');
+        const columnContainers = document.querySelectorAll('.draggable-board');
 
-        containers.forEach(container => {
+        columnContainers.forEach(container => {
             new Sortable(container, {
-                draggable: '.draggable-card',
-                group: 'shared',
+                group: 'columns', // Group for columns
                 animation: 150,
-                onEnd: (evt) => {
-                    // Handle the logic when dragging ends, e.g., update state
-                }
+                onEnd: handleColumnEnd, // Handle column drag end
+            });
+        });
+
+        const cardContainers = document.querySelectorAll('.draggable-column');
+
+        cardContainers.forEach(container => {
+            new Sortable(container, {
+                group: 'shared', // Group for cards
+                draggable: '.draggable-card',
+                animation: 150,
+                onEnd: handleCardEnd, // Handle card drag end
             });
         });
     }, [columnsData]);
+
+
+    const [showMenuIndex, setShowMenuIndex] = useState(null); // للتحكم بظهور القائمة
+
+    const toggleMenu = (index) => {
+        setShowMenuIndex(showMenuIndex === index ? null : index); // إظهار/إخفاء القائمة
+    };
+
+
+    const handleColumnEnd = (evt) => {
+        const updatedColumns = [...columnsData];
+        const [movedColumn] = updatedColumns.splice(evt.oldIndex, 1);
+        updatedColumns.splice(evt.newIndex, 0, movedColumn);
+        setColumnsData(updatedColumns);
+    };
+
+    const handleCardEnd = (evt) => {
+        if (evt.from !== evt.to) {
+            const sourceColumnIndex = Array.from(evt.from.parentNode.children).indexOf(evt.from);
+            const destinationColumnIndex = Array.from(evt.to.parentNode.children).indexOf(evt.to);
+
+            const updatedColumns = [...columnsData];
+            const [movedCard] = updatedColumns[sourceColumnIndex].items.splice(evt.oldIndex, 1);
+            updatedColumns[destinationColumnIndex].items.splice(evt.newIndex, 0, movedCard);
+            setColumnsData(updatedColumns);
+        }
+    };
 
     const handleAddNewColumn = () => {
         if (newColumnName.trim()) {
@@ -149,63 +188,63 @@ const DraggableBoard = () => {
 
     return (
         <div className=''>
-            <div className='relative flex justify-between'>
-                <h1 className='text-4xl font-bold'>Tasks</h1>
-                <button
-                    className="text-lg bg-blue-500 text-white rounded-lg px-4 py-2 mr-16"
-                    onClick={() => setShowForm(true)}
-                >
-                    + Add new
-                </button>
-
-                {showForm && (
-                    <div className="absolute top-[9rem] right-[-9rem] transform -translate-x-1/2 -translate-y-1/2 p-4 w-[20%] bg-white rounded-xl shadow-lg">
-                        <h2 className='text-xl'>Add new column</h2>
-                        <input
-                            type="text"
-                            placeholder="Enter column name"
-                            value={newColumnName}
-                            onChange={(e) => setNewColumnName(e.target.value)}
-                            className="border border-gray-300 rounded-lg px-4 py-2 w-full text-lg"
-                        />
-                        <div className="mt-4">
-                            <button
-                                className="bg-green-500 text-white rounded-lg text-lg px-4 py-2 mr-4"
-                                onClick={handleAddNewColumn}
-                            >
-                                Confirm
-                            </button>
-                            <button
-                                className="bg-red-500 text-white rounded-lg text-lg px-4 py-2"
-                                onClick={() => setShowForm(false)}
-                            >
-                                Cancel
-                            </button>
-                        </div>
-                    </div>
-                )}
-            </div>
-
-            <div className="flex overflow-x-auto space-x-4 p-8">
+            <div className="draggable-board flex overflow-x-auto space-x-4 p-8">
                 {columnsData.map((column, colIndex) => (
-                    <div key={colIndex} className="min-w-[300px]">
-                        <h3 className="text-2xl font-semibold mb-4">{column.title}</h3>
+                    <div key={colIndex} className="min-w-[260px]">
+                        <div className="flex justify-between items-center mb-3 relative">
+                            <h3 className="text-[1.125rem] font-medium text-[#3b4056]">{column.title}</h3>
+                            <CiMenuKebab
+                                className="text-black cursor-pointer"
+                                onClick={() => toggleMenu(colIndex)}
+                            />
+
+                            {/* القائمة المنسدلة */}
+                            {showMenuIndex === colIndex && (
+                                <div className="absolute top-8 right-0 bg-white border rounded-lg shadow-lg z-10 w-36">
+                                    <div className="menu flex flex-col py-2 px-3">
+                                        <div className="menu-item">
+                                            <a className="menu-link text-[18px] font-medium" href="#">
+                                                <div className="menu-icon flex items-center ">
+                                                    <RiDeleteBin7Line />
+                                                    <span className="menu-title">Delete</span>
+                                                </div>
+                                            </a>
+                                        </div>
+                                        <div className="menu-item">
+                                            <a className="menu-link" href="#">
+                                                <span className="menu-title">Menu link 2</span>
+                                            </a>
+                                        </div>
+                                        <div className="menu-item">
+                                            <a className="menu-link" href="#">
+                                                <span className="menu-title">Menu link 3</span>
+                                            </a>
+                                        </div>
+                                        <div className="menu-item">
+                                            <a className="menu-link" href="#">
+                                                <span className="menu-title">Menu link 4</span>
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                         <div className="draggable-column space-y-4">
                             {column.items.map((item, itemIndex) => (
                                 <div
                                     key={itemIndex}
-                                    className="draggable-card p-4 bg-white rounded-lg shadow-md cursor-move"
-                                    onClick={() => handleCardClick(item)} // Handle card click
+                                    className="draggable-card p-4 bg-white rounded-lg shadow-lg shadow-gray-300 cursor-move"
+                                    onClick={() => handleCardClick(item)}
                                 >
-                                    <span className={`inline-block px-2 py-1 text-sm font-semibold ${item.labelColor} rounded-full mb-2`}>
+                                    <span className={`inline-block px-2 py-1 text-sm font-medium ${item.labelColor} rounded-full mb-2`}>
                                         {item.label}
                                     </span>
                                     {item.image && (
                                         <div className="mb-4">
-                                            <img src={item.image} alt={item.title} className="rounded-lg w-full" />
+                                            <Image src={item.image} alt={item.title} width={200} height={200} className="rounded-lg w-full" />
                                         </div>
                                     )}
-                                    <h4 className="text-lg font-medium mb-2">{item.title}</h4>
+                                    <h4 className="text-[.9375rem] font-medium mb-2">{item.title}</h4>
                                     <div className="flex justify-between items-center text-sm text-gray-500">
                                         <div className="flex items-center space-x-4">
                                             <span className="text-lg flex items-center">
@@ -259,22 +298,45 @@ const DraggableBoard = () => {
                         )}
                     </div>
                 ))}
+
+                <div className="min-w-[260px] flex items-center justify-center">
+                    {showForm ? (
+                        <div className="">
+                            <input
+                                type="text"
+                                placeholder="Enter column name"
+                                value={newColumnName}
+                                onChange={(e) => setNewColumnName(e.target.value)}
+                                className="border border-gray-300 rounded-lg px-4 py-2 w-full text-xl"
+                            />
+                            <div className="mt-4">
+                                <button
+                                    className="bg-green-500 text-white rounded-lg text-xl px-4 py-2 mr-4"
+                                    onClick={handleAddNewColumn}
+                                >
+                                    Add Column
+                                </button>
+                                <button
+                                    className="bg-red-500 text-white rounded-lg text-xl px-4 py-2"
+                                    onClick={() => setShowForm(false)}
+                                >
+                                    Cancel
+                                </button>
+                            </div>
+                        </div>
+                    ) : (
+                        <button
+                            className="text-lg text-gray-500 rounded-lg px-4 py-2"
+                            onClick={() => setShowForm(true)}
+                        >
+                            + Add New Column
+                        </button>
+                    )}
+                </div>
             </div>
 
             {selectedCard && (
-                <div className='fixed inset-0 bg-black bg-opacity-50 z-40 backdrop-blur-sm'
-                    onClick={() => setSelectedCard(null)}
-                >
-                    <div className={`fixed top-0 right-0 h-full w-[35%] bg-white shadow-lg z-50 transform transition-transform ease-in-out duration-300 ${selectedCard ? 'translate-x-0' : 'translate-x-full'}`}
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        <EditTaskForm
-                            card={selectedCard}
-                            onClose={() => setSelectedCard(null)}
-                            onSave={handleSaveCard}
-                        />
-                    </div>
-                </div>
+                <EditTaskForm card={selectedCard} onSave={handleSaveCard} onCancel={() => setSelectedCard(null)} />
             )}
         </div>
     );
