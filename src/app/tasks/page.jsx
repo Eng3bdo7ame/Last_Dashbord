@@ -1,137 +1,116 @@
-"use client";
-import "../../css/taskes.css";
+'use client';
+
 import React, { useEffect, useState } from 'react';
 import Sortable from 'sortablejs';
-import { GoPaperclip } from "react-icons/go";
-import { BiMessageSquareDetail } from "react-icons/bi";
-import { FaUserCircle } from "react-icons/fa";
-import EditTaskForm from "./updateTask"; // Update with the correct path to your edit form component
-import Image from "next/image";
-import { CiMenuKebab } from "react-icons/ci";
-import { RiDeleteBin7Line } from "react-icons/ri";
+import { GoPaperclip } from 'react-icons/go';
+import { BiMessageSquareDetail } from 'react-icons/bi';
+import { FaUserCircle } from 'react-icons/fa';
+import EditTaskForm from './updateTask'; // Ensure the path is correct
+import { CiMenuKebab } from 'react-icons/ci';
+import { RiDeleteBin7Line } from 'react-icons/ri';
+
+// WebSocket setup
+const boardId = 1;
+const socket = new WebSocket(`wss://dashboard.cowdly.com/ws/boards/${boardId}/`);
 
 const DraggableBoard = () => {
-    const [columnsData, setColumnsData] = useState([
-        {
-            title: "In Progress",
-            items: [
-                {
-                    label: "UX",
-                    labelColor: "bg-green-200 text-green-700",
-                    title: "Research FAQ page UX",
-                    attachments: 4,
-                    comments: 12,
-                    users: [1, 2, 3],
-                },
-                {
-                    label: "Code Review",
-                    labelColor: "bg-red-200 text-red-700",
-                    title: "Review Javascript code",
-                    attachments: 2,
-                    comments: 8,
-                    users: [4, 5],
-                },
-            ],
-        },
-        {
-            title: "In Review",
-            items: [
-                {
-                    label: "Info",
-                    labelColor: "bg-blue-200 text-blue-700",
-                    title: "Review completed Apps",
-                    attachments: 8,
-                    comments: 17,
-                    users: [6, 7],
-                },
-                {
-                    label: "Images",
-                    labelColor: "bg-yellow-200 text-yellow-700",
-                    title: "Find new images for pages",
-                    attachments: 10,
-                    comments: 18,
-                    image: "/placeholder.svg", // Placeholder image
-                    users: [1, 2, 3, 4],
-                },
-            ],
-        },
-        {
-            title: "Done",
-            items: [
-                {
-                    label: "App",
-                    labelColor: "bg-gray-200 text-gray-700",
-                    title: "Forms & Tables section",
-                    attachments: 1,
-                    comments: 4,
-                    users: [8, 9, 10],
-                },
-                {
-                    label: "Charts & Maps",
-                    labelColor: "bg-purple-200 text-purple-700",
-                    title: "Completed Charts & Maps",
-                    attachments: 6,
-                    comments: 21,
-                    users: [11],
-                },
-            ],
-        },
-    ]);
-
+    const [columnsData, setColumnsData] = useState([]);
     const [showForm, setShowForm] = useState(false);
-    const [newColumnName, setNewColumnName] = useState("");
-    const [newCardName, setNewCardName] = useState("");
+    const [newColumnName, setNewColumnName] = useState('');
+    const [newCardName, setNewCardName] = useState('');
     const [showCardForm, setShowCardForm] = useState(null);
     const [selectedCard, setSelectedCard] = useState(null);
     const [showMenuIndex, setShowMenuIndex] = useState(null); // For toggling menu
 
     useEffect(() => {
-        const columnContainers = document.querySelectorAll(".draggable-board");
+        // Load data from local storage on component mount
+        const savedData = localStorage.getItem('boardData');
+        if (savedData) {
+            setColumnsData(JSON.parse(savedData));
+        }
 
+        // WebSocket events
+        socket.onopen = () => {
+            console.log('Connected to WebSocket server');
+            socket.send(JSON.stringify({ action: 'get_board' }));
+        };
+
+        socket.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            if (data.board_data) {
+                setColumnsData(data.board_data.lists); // Update the columnsData from server
+                // Save to local storage
+                localStorage.setItem('boardData', JSON.stringify(data.board_data.lists));
+            }
+        };
+
+        socket.onerror = (error) => {
+            console.error('WebSocket Error:', error.message || error);
+        };
+
+        socket.onclose = (event) => {
+            console.log('WebSocket closed:', event.reason || 'No reason provided');
+        };
+
+        // Set up Sortable.js for columns and cards
+        const columnContainers = document.querySelectorAll('.draggable-board');
         columnContainers.forEach((container) => {
             new Sortable(container, {
-                group: "columns", // Group for columns
+                group: 'columns',
                 animation: 150,
-                onEnd: handleColumnEnd, // Handle column drag end
+                onEnd: handleColumnEnd,
             });
         });
 
-        const cardContainers = document.querySelectorAll(".draggable-column");
-
+        const cardContainers = document.querySelectorAll('.draggable-column');
         cardContainers.forEach((container) => {
             new Sortable(container, {
-                group: "shared", // Group for cards
-                draggable: ".draggable-card",
+                group: 'shared',
+                draggable: '.draggable-card',
                 animation: 150,
-                onEnd: handleCardEnd, // Handle card drag end
+                onEnd: handleCardEnd,
             });
         });
-    }, [columnsData]);
+
+        return () => {
+            socket.close(); // Clean up WebSocket connection on component unmount
+        };
+    }, []);
 
     const toggleMenu = (index) => {
-        setShowMenuIndex(showMenuIndex === index ? null : index); // Toggle menu visibility
+        setShowMenuIndex(showMenuIndex === index ? null : index);
     };
 
+    // Update board on column drag
     const handleColumnEnd = (evt) => {
         const updatedColumns = [...columnsData];
         const [movedColumn] = updatedColumns.splice(evt.oldIndex, 1);
         updatedColumns.splice(evt.newIndex, 0, movedColumn);
         setColumnsData(updatedColumns);
+        updateBoardDataOnServer(updatedColumns);
     };
 
+    // Update board on card drag
     const handleCardEnd = (evt) => {
         if (evt.from !== evt.to) {
             const sourceColumnIndex = Array.from(evt.from.parentNode.children).indexOf(evt.from);
             const destinationColumnIndex = Array.from(evt.to.parentNode.children).indexOf(evt.to);
 
             const updatedColumns = [...columnsData];
-            const [movedCard] = updatedColumns[sourceColumnIndex].items.splice(
-                evt.oldIndex,
-                1
-            );
+            const [movedCard] = updatedColumns[sourceColumnIndex].items.splice(evt.oldIndex, 1);
             updatedColumns[destinationColumnIndex].items.splice(evt.newIndex, 0, movedCard);
             setColumnsData(updatedColumns);
+            updateBoardDataOnServer(updatedColumns);
         }
+    };
+
+    // Function to update the board data via WebSocket
+    const updateBoardDataOnServer = (updatedColumns) => {
+        const boardData = {
+            action: 'update_board',
+            board: { lists: updatedColumns },
+        };
+        socket.send(JSON.stringify(boardData));
     };
 
     const handleAddNewColumn = () => {
@@ -140,17 +119,19 @@ const DraggableBoard = () => {
                 title: newColumnName,
                 items: [],
             };
-            setColumnsData([...columnsData, newColumn]);
+            const updatedColumns = [...columnsData, newColumn];
+            setColumnsData(updatedColumns);
             setShowForm(false);
-            setNewColumnName("");
+            setNewColumnName('');
+            updateBoardDataOnServer(updatedColumns);
         }
     };
 
     const handleAddNewCard = (colIndex) => {
         if (newCardName.trim()) {
             const newCard = {
-                label: "New Card",
-                labelColor: "bg-gray-200 text-gray-700",
+                label: 'New Card',
+                labelColor: 'bg-gray-200 text-gray-700',
                 title: newCardName,
                 attachments: 0,
                 comments: 0,
@@ -159,8 +140,9 @@ const DraggableBoard = () => {
             const updatedColumns = [...columnsData];
             updatedColumns[colIndex].items.push(newCard);
             setColumnsData(updatedColumns);
-            setNewCardName("");
+            setNewCardName('');
             setShowCardForm(null);
+            updateBoardDataOnServer(updatedColumns);
         }
     };
 
@@ -177,10 +159,11 @@ const DraggableBoard = () => {
         }));
         setColumnsData(updatedColumns);
         setSelectedCard(null);
+        updateBoardDataOnServer(updatedColumns);
     };
 
     return (
-        <div className="">
+        <div>
             <div className="draggable-board flex overflow-x-auto space-x-4 p-8">
                 {columnsData.map((column, colIndex) => (
                     <div key={colIndex} className="min-w-[260px]">
@@ -193,24 +176,25 @@ const DraggableBoard = () => {
                                 onClick={() => toggleMenu(colIndex)}
                             />
 
-                            {/* Dropdown menu */}
                             {showMenuIndex === colIndex && (
                                 <div className="absolute top-8 right-0 bg-white border rounded-lg shadow-lg z-10 w-36">
                                     <div className="menu flex flex-col py-2 px-3">
                                         <div className="menu-item">
-                                            <a className="menu-link text-[18px] font-medium" href="#">
-                                                <div className="menu-icon flex items-center ">
+                                            <button
+                                                className="menu-link text-[18px] font-medium w-full text-left"
+                                                onClick={() => handleDeleteColumn(colIndex)}
+                                            >
+                                                <div className="menu-icon flex items-center space-x-2">
                                                     <RiDeleteBin7Line />
                                                     <span className="menu-title">Delete</span>
                                                 </div>
-                                            </a>
+                                            </button>
                                         </div>
                                     </div>
                                 </div>
                             )}
                         </div>
 
-                        {/* Draggable column for tasks */}
                         <div className="draggable-column space-y-3">
                             {column.items.map((item, cardIndex) => (
                                 <div
@@ -223,7 +207,6 @@ const DraggableBoard = () => {
                                     </div>
                                     <h4 className="font-medium mt-2 text-lg">{item.title}</h4>
 
-                                    {/* Task Info */}
                                     <div className="mt-4 flex justify-between items-center">
                                         <div className="flex items-center space-x-1">
                                             <GoPaperclip />
@@ -234,77 +217,61 @@ const DraggableBoard = () => {
                                             <span>{item.comments}</span>
                                         </div>
                                         <div className="flex items-center space-x-1">
-                                            {item.users.map((user, index) => (
-                                                <FaUserCircle key={index} />
-                                            ))}
+                                            {item.users.length ? (
+                                                item.users.map((user, index) => (
+                                                    <FaUserCircle key={index} />
+                                                ))
+                                            ) : (
+                                                <FaUserCircle />
+                                            )}
                                         </div>
                                     </div>
                                 </div>
                             ))}
+                            {showCardForm === colIndex && (
+                                <div className="mt-4 flex">
+                                    <input
+                                        type="text"
+                                        placeholder="New Card Title"
+                                        value={newCardName}
+                                        onChange={(e) => setNewCardName(e.target.value)}
+                                        className="border rounded-l-lg p-2 w-full"
+                                    />
+                                    <button
+                                        onClick={() => handleAddNewCard(colIndex)}
+                                        className="bg-blue-500 text-white rounded-r-lg px-4"
+                                    >
+                                        Add
+                                    </button>
+                                </div>
+                            )}
                         </div>
-
-                        {/* Form for adding new card */}
-                        {showCardForm === colIndex && (
-                            <div className="mt-2">
-                                <input
-                                    type="text"
-                                    placeholder="New card name"
-                                    value={newCardName}
-                                    onChange={(e) => setNewCardName(e.target.value)}
-                                    className="border border-gray-300 rounded-md p-2 w-full"
-                                />
-                                <button
-                                    onClick={() => handleAddNewCard(colIndex)}
-                                    className="bg-blue-500 text-white rounded-md p-2 mt-2 w-full"
-                                >
-                                    Add Card
-                                </button>
-                            </div>
-                        )}
-
-                        {/* Button to show form for adding new card */}
-                        {!showCardForm && (
-                            <button
-                                onClick={() => setShowCardForm(colIndex)}
-                                className="bg-green-500 text-white rounded-md p-2 mt-4 w-full"
-                            >
-                                + Add New Card
-                            </button>
-                        )}
                     </div>
                 ))}
             </div>
-
-            {/* Form for adding new column */}
+            <button
+                onClick={() => setShowForm(true)}
+                className="bg-green-500 text-white p-2 rounded-lg mt-4"
+            >
+                Add New Column
+            </button>
             {showForm && (
-                <div className="mt-4">
+                <div className="mt-4 flex">
                     <input
                         type="text"
-                        placeholder="New column name"
+                        placeholder="New Column Name"
                         value={newColumnName}
                         onChange={(e) => setNewColumnName(e.target.value)}
-                        className="border border-gray-300 rounded-md p-2 w-full"
+                        className="border rounded-l-lg p-2 w-full"
                     />
                     <button
                         onClick={handleAddNewColumn}
-                        className="bg-blue-500 text-white rounded-md p-2 mt-2 w-full"
+                        className="bg-blue-500 text-white rounded-r-lg px-4"
                     >
-                        Add Column
+                        Add
                     </button>
                 </div>
             )}
-
-            {/* Button to show form for adding new column */}
-            {!showForm && (
-                <button
-                    onClick={() => setShowForm(true)}
-                    className="bg-green-500 text-white rounded-md p-2 mt-4 w-full"
-                >
-                    + Add New Column
-                </button>
-            )}
-
-            {/* Edit Task Form */}
             {selectedCard && (
                 <EditTaskForm
                     card={selectedCard}
