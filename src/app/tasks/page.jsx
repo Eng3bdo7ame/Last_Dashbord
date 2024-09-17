@@ -8,9 +8,8 @@ import { BiMessageSquareDetail } from 'react-icons/bi';
 import { FaUserCircle } from 'react-icons/fa';
 import { CiMenuKebab } from 'react-icons/ci';
 
-// WebSocket setup
-const boardId = 1;
-const socket = new WebSocket(`wss://dashboard.cowdly.com/ws/boards/${boardId}/`);
+const boardId = 1; // أو أي معرف حسب الحاجة
+const socketUrl = `wss://dashboard.cowdly.com`; // تأكد من صحة URL
 
 const DraggableBoard = () => {
     const [columnsData, setColumnsData] = useState([]);
@@ -20,66 +19,63 @@ const DraggableBoard = () => {
     const [showCardForm, setShowCardForm] = useState(null);
     const [socket, setSocket] = useState(null);
 
+    // التهيئة واسترجاع البيانات من localStorage
     useEffect(() => {
-        // Load data from local storage on component mount
-        const savedData = localStorage.getItem('boardData');
-        if (savedData) {
-            setColumnsData(JSON.parse(savedData));
+        const storedData = localStorage.getItem('boardData');
+        if (storedData) {
+            setColumnsData(JSON.parse(storedData));
         }
 
-        // WebSocket events
-        socket.onopen = () => {
-            console.log('Connected to WebSocket server');
-            socket.send(JSON.stringify({ action: 'get_board' }));
-        };
+        const newSocket = io(socketUrl, {
+            transports: ['websocket'], // استخدم WebSocket
+        });
+        setSocket(newSocket);
 
-        socket.onmessage = (event) => {
-            const data = JSON.parse(event.data);
+        newSocket.on('connect', () => {
+            console.log('Connected to Socket.IO server');
+            newSocket.emit('get_board', { boardId });
+        });
+
+        newSocket.on('board_data', (data) => {
             if (data.board_data) {
-                setColumnsData(data.board_data.lists); // Update the columnsData from server
-                // Save to local storage
+                setColumnsData(data.board_data.lists);
                 localStorage.setItem('boardData', JSON.stringify(data.board_data.lists));
             }
-        };
+        });
 
-        socket.onerror = (error) => {
-            console.error('WebSocket Error:', error.message || error);
-        };
+        newSocket.on('disconnect', (reason) => {
+            console.log('Socket.IO disconnected:', reason);
+        });
 
-        socket.onclose = (event) => {
-            console.log('WebSocket closed:', event.reason || 'No reason provided');
+        return () => {
+            newSocket.disconnect();
         };
+    }, []);
 
-        // Set up Sortable.js for columns and cards
-        const columnContainers = document.querySelectorAll('.draggable-board');
-        columnContainers.forEach((container) => {
-            new Sortable(container, {
+    // تهيئة Sortable بعد تحميل البيانات
+    useEffect(() => {
+        const columnsContainer = document.querySelector('.draggable-board');
+        if (columnsContainer) {
+            Sortable.create(columnsContainer, {
                 group: 'columns',
                 animation: 150,
                 onEnd: handleColumnEnd,
             });
-        });
 
-        const cardContainers = document.querySelectorAll('.draggable-column');
-        cardContainers.forEach((container) => {
-            new Sortable(container, {
-                group: 'shared',
-                draggable: '.draggable-card',
-                animation: 150,
-                onEnd: handleCardEnd,
+            columnsData.forEach((column, colIndex) => {
+                const columnElement = document.querySelector(`#column-${colIndex}`);
+                if (columnElement) {
+                    Sortable.create(columnElement, {
+                        group: 'cards',
+                        animation: 150,
+                        onEnd: handleCardEnd,
+                    });
+                }
             });
-        });
+        }
+    }, [columnsData]);
 
-        return () => {
-            socket.close(); // Clean up WebSocket connection on component unmount
-        };
-    }, []);
-
-    const toggleMenu = (index) => {
-        setShowMenuIndex(showMenuIndex === index ? null : index);
-    };
-
-    // Update board on column drag
+    // معالجة نهاية سحب العمود
     const handleColumnEnd = (evt) => {
         const updatedColumns = [...columnsData];
         const [movedColumn] = updatedColumns.splice(evt.oldIndex, 1);
@@ -89,6 +85,7 @@ const DraggableBoard = () => {
         localStorage.setItem('boardData', JSON.stringify(updatedColumns));
     };
 
+    // معالجة نهاية سحب البطاقة
     const handleCardEnd = (evt) => {
         if (evt.from !== evt.to) {
             const sourceColumnIndex = Array.from(evt.from.parentNode.children).indexOf(evt.from);
@@ -103,15 +100,20 @@ const DraggableBoard = () => {
         }
     };
 
-    // Function to update the board data via WebSocket
+    // تحديث بيانات اللوحة على الخادم
     const updateBoardDataOnServer = (updatedColumns) => {
-        const boardData = {
-            action: 'update_board',
-            board: { lists: updatedColumns },
-        };
-        socket.send(JSON.stringify(boardData));
+        if (socket) {
+            const boardData = {
+                action: 'update_board',
+                board: { lists: updatedColumns },
+            };
+            socket.emit('update_board', boardData);
+        } else {
+            console.warn('Socket.IO client is not connected.');
+        }
     };
 
+    // إضافة عمود جديد
     const handleAddNewColumn = () => {
         if (newColumnName.trim()) {
             const newColumn = {
@@ -127,6 +129,7 @@ const DraggableBoard = () => {
         }
     };
 
+    // إضافة بطاقة جديدة
     const handleAddNewCard = (colIndex) => {
         if (newCardName.trim()) {
             const newCard = {
@@ -147,12 +150,6 @@ const DraggableBoard = () => {
         }
     };
 
-    const handleDeleteColumn = (colIndex) => {
-        const updatedColumns = columnsData.filter((_, index) => index !== colIndex);
-        setColumnsData(updatedColumns);
-        updateBoardDataOnServer(updatedColumns);
-    };
-
     return (
         <div>
             <div className="draggable-board flex overflow-x-auto space-x-4 p-8">
@@ -162,29 +159,27 @@ const DraggableBoard = () => {
                             <h3 className="text-[1.125rem] font-medium text-[#3b4056]">
                                 {column.title}
                             </h3>
-                            <CiMenuKebab
-                                className="text-black cursor-pointer"
-                                onClick={() => toggleMenu(colIndex)}
-                            />
-
-                            {showMenuIndex === colIndex && (
-                                <div className="absolute top-8 right-0 bg-white border rounded-lg shadow-lg z-10 w-36">
-                                    <div className="menu flex flex-col py-2 px-3">
-                                        <div className="menu-item">
-                                            <button
-                                                className="menu-link text-[18px] font-medium w-full text-left"
-                                                onClick={() => handleDeleteColumn(colIndex)}
-                                            >
-                                                <div className="menu-icon flex items-center space-x-2">
-                                                    <RiDeleteBin7Line />
-                                                    <span className="menu-title">Delete</span>
-                                                </div>
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
+                            <CiMenuKebab className="text-black cursor-pointer" />
                         </div>
+
+                        {/* نموذج إضافة بطاقة جديدة */}
+                        {showCardForm === colIndex && (
+                            <div className="mb-4">
+                                <input
+                                    type="text"
+                                    value={newCardName}
+                                    onChange={(e) => setNewCardName(e.target.value)}
+                                    placeholder="New Card Title"
+                                    className="border rounded-lg p-2 w-full"
+                                />
+                                <button
+                                    onClick={() => handleAddNewCard(colIndex)}
+                                    className="bg-blue-500 text-white rounded-lg py-2 px-4 mt-2"
+                                >
+                                    Add Card
+                                </button>
+                            </div>
+                        )}
 
                         <div className="draggable-column p-2 bg-[#F4F6F8] rounded-lg">
                             {column.items.map((item, cardIndex) => (
@@ -196,79 +191,59 @@ const DraggableBoard = () => {
                                         <div className={`h-3 w-3 ${item.labelColor} rounded-full`}></div>
                                         <p className="text-sm font-medium ml-2">{item.title}</p>
                                     </div>
-                                    <h4 className="font-medium mt-2 text-lg">{item.title}</h4>
-
-                                    <div className="mt-4 flex justify-between items-center">
-                                        <div className="flex items-center space-x-1">
-                                            <GoPaperclip />
+                                    <div className="flex items-center justify-between text-gray-500 text-xs">
+                                        <div className="flex items-center">
+                                            <GoPaperclip className="mr-1" />
                                             <span>{item.attachments}</span>
                                         </div>
                                         <div className="flex items-center">
                                             <BiMessageSquareDetail className="mr-1" />
                                             <span>{item.comments}</span>
                                         </div>
-                                        <div className="flex items-center space-x-1">
-                                            {item.users.length ? (
-                                                item.users.map((user, index) => (
-                                                    <FaUserCircle key={index} />
-                                                ))
-                                            ) : (
-                                                <FaUserCircle />
-                                            )}
+                                        <div className="flex items-center">
+                                            <FaUserCircle className="mr-1" />
+                                            <span>{item.users.length}</span>
                                         </div>
                                     </div>
                                 </div>
                             ))}
-                            {showCardForm === colIndex && (
-                                <div className="mt-4 flex">
-                                    <input
-                                        type="text"
-                                        placeholder="New Card Title"
-                                        value={newCardName}
-                                        onChange={(e) => setNewCardName(e.target.value)}
-                                        className="border rounded-l-lg p-2 w-full"
-                                    />
-                                    <button
-                                        onClick={() => handleAddNewCard(colIndex)}
-                                        className="bg-blue-500 text-white rounded-r-lg px-4"
-                                    >
-                                        Add
-                                    </button>
-                                </div>
-                            )}
                         </div>
+
+                        <button
+                            onClick={() => setShowCardForm(colIndex)}
+                            className="bg-green-500 text-white rounded-lg py-2 px-4 mt-4"
+                        >
+                            Add Card
+                        </button>
                     </div>
                 ))}
             </div>
-            <button
-                onClick={() => setShowForm(true)}
-                className="bg-green-500 text-white p-2 rounded-lg mt-4"
-            >
-                Add New Column
-            </button>
-            {showForm && (
-                <div className="mt-4 flex">
+
+            {/* نموذج إضافة عمود جديد */}
+            {showColumnForm && (
+                <div className="mb-4">
                     <input
                         type="text"
                         value={newColumnName}
                         onChange={(e) => setNewColumnName(e.target.value)}
-                        className="border rounded-l-lg p-2 w-full"
+                        placeholder="New Column Title"
+                        className="border rounded-lg p-2 w-full"
                     />
                     <button
                         onClick={handleAddNewColumn}
-                        className="bg-blue-500 text-white rounded-r-lg px-4"
+                        className="bg-blue-500 text-white rounded-lg py-2 px-4 mt-2"
                     >
                         Add Column
                     </button>
                 </div>
             )}
-            {selectedCard && (
-                <EditTaskForm
-                    card={selectedCard}
-                    onSave={handleSaveCard}
-                    onClose={() => setSelectedCard(null)}
-                />
-            )}
+
+            <button
+                onClick={() => setShowColumnForm(true)}
+                className="bg-blue-500 text-white rounded-lg py-2 px-4 mt-4"
+            >
+                Add Column
+            </button>
         </div>
     );
 };
