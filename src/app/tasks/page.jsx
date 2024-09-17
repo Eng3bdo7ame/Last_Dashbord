@@ -124,18 +124,21 @@ const DraggableBoard = () => {
         const sourceTasks = updatedColumns[sourceColumnIndex].tasks;
         const destinationTasks = updatedColumns[destinationColumnIndex].tasks;
     
-        // Check if valid task is being moved
+        // Only proceed if valid task movement
         if (evt.oldIndex < sourceTasks.length) {
-            const [movedCard] = sourceTasks.splice(evt.oldIndex, 1); // Remove task from source
-            destinationTasks.splice(evt.newIndex, 0, movedCard); // Insert task into destination
+            const [movedCard] = sourceTasks.splice(evt.oldIndex, 1); // Remove from source
+            destinationTasks.splice(evt.newIndex, 0, movedCard); // Add to destination
     
-            // Update state and server with the new order
+            // Update the state to reflect the move
             setColumnsData(updatedColumns);
+    
+            // Send the updated data to the server/WebSocket
             updateBoardDataOnServer(updatedColumns);
         } else {
             console.warn('Invalid task move operation');
         }
     };
+    
     
 
     const updateBoardDataOnServer = (updatedColumns) => {
@@ -144,11 +147,12 @@ const DraggableBoard = () => {
                 action: 'update_board',
                 board: { lists: updatedColumns },
             };
-            boardSocket.send(JSON.stringify(boardData));
+            boardSocket.send(JSON.stringify(boardData)); // Send to WebSocket
         } else {
             console.warn('Board WebSocket is not connected.');
         }
     };
+    
 
     const handleAddNewColumn = () => {
         if (newColumnName.trim()) {
@@ -177,16 +181,20 @@ const DraggableBoard = () => {
             };
     
             const updatedColumns = [...columnsData];
-            updatedColumns[colIndex].tasks.push(newCard);
+            updatedColumns[colIndex].tasks.push(newCard); // Add new card to the column
     
+            // Update the local state
             setColumnsData(updatedColumns);
-            setNewCardName(''); // Reset the input field
+            setNewCardName(''); // Reset input
             setShowCardForm(null);
+    
+            // Send updated data to WebSocket/server
             updateBoardDataOnServer(updatedColumns);
         } else {
             console.warn('Card name is empty');
         }
     };
+    
     
 
     return (
