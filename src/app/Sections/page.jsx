@@ -1,9 +1,9 @@
 import React from 'react'
-import Stage from '../StagePages/Stage'
+import Sections from '../SectionsPage/Sections'
 
 const page = () => {
     return (
-        < Stage />
+        <Sections />
     )
 }
 

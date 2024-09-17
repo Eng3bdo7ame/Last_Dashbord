@@ -14,7 +14,7 @@ import dynamic from "next/dynamic";
 const PreviewProject = lazy(() => import("./PreviewProjects"));
 const AddProject = lazy(() => import("./AddProjects"));
 
-const Clients = ({ role }) => {
+const Projects = ({ role }) => {
     const [openPreview, setOpenPreview] = useState(false);
     const [openCreate, setOpenCreate] = useState(false);
 
@@ -75,4 +75,4 @@ const Clients = ({ role }) => {
     );
 };
 
-export default Clients;
+export default Projects;

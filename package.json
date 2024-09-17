@@ -48,6 +48,8 @@
 
         "react-apexcharts": "^1.4.1",
 
+        "react-contenteditable": "^3.3.7",
+
         "react-datepicker": "^7.3.0",
 
         "react-dom": "^18",

@@ -1,9 +1,9 @@
 import React from 'react'
-import Stage from '../StagePages/Stage'
+import HumanResources from '../HumanResourcesPage/HumanResources'
 
 const page = () => {
     return (
-        < Stage />
+        <HumanResources />
     )
 }
 
