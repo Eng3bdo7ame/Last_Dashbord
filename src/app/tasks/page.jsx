@@ -8,7 +8,7 @@ import { FaUserCircle } from 'react-icons/fa';
 import { CiMenuKebab } from 'react-icons/ci';
 
 const boardId = 1;
-const defaultApiUrl = `https://dashboard.cowdly.com/api/kanban/boards/`;
+const defaultApiUrl = `wss://dashboard.cowdly.com/ws/kanban/boards/`;
 const boardSocketUrl = `wss://dashboard.cowdly.com/ws/boards/${boardId}/`;
 
 const DraggableBoard = () => {
