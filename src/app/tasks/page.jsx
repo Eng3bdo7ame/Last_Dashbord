@@ -8,8 +8,8 @@ import { BiMessageSquareDetail } from 'react-icons/bi';
 import { FaUserCircle } from 'react-icons/fa';
 import { CiMenuKebab } from 'react-icons/ci';
 
-const boardId = 1; // أو أي معرف حسب الحاجة
-const socketUrl = `wss://dashboard.cowdly.com`; // تأكد من صحة URL
+const boardId = 1; // Replace with dynamic board ID if necessary
+const socketUrl = `https://dashboard.cowdly.com/`; // Only the base URL, Socket.IO will append the rest
 
 const DraggableBoard = () => {
     const [columnsData, setColumnsData] = useState([]);
@@ -19,16 +19,13 @@ const DraggableBoard = () => {
     const [showCardForm, setShowCardForm] = useState(null);
     const [socket, setSocket] = useState(null);
 
-    // التهيئة واسترجاع البيانات من localStorage
-    useEffect(() => {
-        const storedData = localStorage.getItem('boardData');
-        if (storedData) {
-            setColumnsData(JSON.parse(storedData));
-        }
-
+    // Function to initialize WebSocket connection with retries
+    const initializeSocket = () => {
         const newSocket = io(socketUrl, {
-            transports: ['websocket'], // استخدم WebSocket
+            path: '/socket.io',  // This explicitly tells the client to use the correct path
+            transports: ['websocket'],  // Ensure WebSocket is used as the transport
         });
+
         setSocket(newSocket);
 
         newSocket.on('connect', () => {
@@ -38,21 +35,29 @@ const DraggableBoard = () => {
 
         newSocket.on('board_data', (data) => {
             if (data.board_data) {
-                setColumnsData(data.board_data.lists);
-                localStorage.setItem('boardData', JSON.stringify(data.board_data.lists));
+                setColumnsData(data.board_data.lists); // Set board data from database
             }
         });
 
         newSocket.on('disconnect', (reason) => {
             console.log('Socket.IO disconnected:', reason);
+            // Attempt to reconnect
+            if (reason !== 'io client disconnect') {
+                setTimeout(() => initializeSocket(), 3000); // Retry connection every 3 seconds
+            }
         });
+    };
+
+    // Initialize and connect to WebSocket
+    useEffect(() => {
+        initializeSocket();
 
         return () => {
-            newSocket.disconnect();
+            if (socket) socket.disconnect(); // Disconnect socket on component unmount
         };
     }, []);
 
-    // تهيئة Sortable بعد تحميل البيانات
+    // Initialize Sortable after data load
     useEffect(() => {
         const columnsContainer = document.querySelector('.draggable-board');
         if (columnsContainer) {
@@ -75,17 +80,16 @@ const DraggableBoard = () => {
         }
     }, [columnsData]);
 
-    // معالجة نهاية سحب العمود
+    // Handle column drag-and-drop
     const handleColumnEnd = (evt) => {
         const updatedColumns = [...columnsData];
         const [movedColumn] = updatedColumns.splice(evt.oldIndex, 1);
         updatedColumns.splice(evt.newIndex, 0, movedColumn);
         setColumnsData(updatedColumns);
         updateBoardDataOnServer(updatedColumns);
-        localStorage.setItem('boardData', JSON.stringify(updatedColumns));
     };
 
-    // معالجة نهاية سحب البطاقة
+    // Handle card drag-and-drop between columns
     const handleCardEnd = (evt) => {
         if (evt.from !== evt.to) {
             const sourceColumnIndex = Array.from(evt.from.parentNode.children).indexOf(evt.from);
@@ -96,24 +100,27 @@ const DraggableBoard = () => {
             updatedColumns[destinationColumnIndex].items.splice(evt.newIndex, 0, movedCard);
             setColumnsData(updatedColumns);
             updateBoardDataOnServer(updatedColumns);
-            localStorage.setItem('boardData', JSON.stringify(updatedColumns));
         }
     };
 
-    // تحديث بيانات اللوحة على الخادم
+    // Update board data on the server via WebSocket
     const updateBoardDataOnServer = (updatedColumns) => {
-        if (socket) {
+        if (socket && socket.connected) {
             const boardData = {
                 action: 'update_board',
-                board: { lists: updatedColumns },
+                board: { lists: updatedColumns }, // Send updated board data to be saved in the database
             };
-            socket.emit('update_board', boardData);
+            socket.emit('update_board', boardData, (response) => {
+                if (chrome.runtime.lastError) {
+                    console.error('Socket message error:', chrome.runtime.lastError.message);
+                }
+            });
         } else {
             console.warn('Socket.IO client is not connected.');
         }
     };
 
-    // إضافة عمود جديد
+    // Add a new column
     const handleAddNewColumn = () => {
         if (newColumnName.trim()) {
             const newColumn = {
@@ -125,11 +132,10 @@ const DraggableBoard = () => {
             setShowColumnForm(false);
             setNewColumnName('');
             updateBoardDataOnServer(updatedColumns);
-            localStorage.setItem('boardData', JSON.stringify(updatedColumns));
         }
     };
 
-    // إضافة بطاقة جديدة
+    // Add a new card
     const handleAddNewCard = (colIndex) => {
         if (newCardName.trim()) {
             const newCard = {
@@ -146,7 +152,6 @@ const DraggableBoard = () => {
             setNewCardName('');
             setShowCardForm(null);
             updateBoardDataOnServer(updatedColumns);
-            localStorage.setItem('boardData', JSON.stringify(updatedColumns));
         }
     };
 
@@ -162,7 +167,6 @@ const DraggableBoard = () => {
                             <CiMenuKebab className="text-black cursor-pointer" />
                         </div>
 
-                        {/* نموذج إضافة بطاقة جديدة */}
                         {showCardForm === colIndex && (
                             <div className="mb-4">
                                 <input
@@ -219,7 +223,6 @@ const DraggableBoard = () => {
                 ))}
             </div>
 
-            {/* نموذج إضافة عمود جديد */}
             {showColumnForm && (
                 <div className="mb-4">
                     <input
