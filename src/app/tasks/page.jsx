@@ -15,6 +15,8 @@ const TaskPage = () => {
         return savedData ? JSON.parse(savedData) : initialColumnsData;
     });
 
+
+
     const [showForm, setShowForm] = useState(false);
     const [newColumnName, setNewColumnName] = useState('');
     const [newCardName, setNewCardName] = useState('');
