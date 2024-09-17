@@ -8,7 +8,7 @@ import { FaUserCircle } from 'react-icons/fa';
 import { CiMenuKebab } from 'react-icons/ci';
 
 const boardId = 1;
-const defaultApiUrl = `https://dashboard.cowdly.com/api/kanban/boards/`;
+const defaultApiUrl = `wss://dashboard.cowdly.com/ws/kanban/boards/`;
 const boardSocketUrl = `wss://dashboard.cowdly.com/ws/boards/${boardId}/`;
 
 const DraggableBoard = () => {
@@ -80,27 +80,42 @@ const DraggableBoard = () => {
 
     useEffect(() => {
         if (columnsData.length > 0) {
+            // Initialize column sorting
             const columnsContainer = document.querySelector('.draggable-board');
             if (columnsContainer) {
                 Sortable.create(columnsContainer, {
                     group: 'columns',
                     animation: 150,
                     onEnd: handleColumnEnd,
+                    // Disable drag-and-drop between columns
+                    filter: '.draggable-card', // Ensures only columns can be dragged
                 });
             }
-
+    
+            // Initialize card sorting for each column
             columnsData.forEach((_, colIndex) => {
                 const columnElement = document.querySelector(`#column-${colIndex}`);
                 if (columnElement) {
                     Sortable.create(columnElement, {
-                        group: 'cards',
+                        group: {
+                            name: `cards-${colIndex}`, // Unique group for each column
+                            put: false, // Prevent cards from being moved to other columns
+                        },
                         animation: 150,
-                        onEnd: handleCardEnd,
+                        onEnd: (evt) => handleCardEnd(evt, colIndex),
+                        // Ensure only the card is moved, not affecting the visibility of others
+                        onStart: (evt) => {
+                            evt.from.style.overflow = 'hidden'; // Hide overflow during drag
+                        },
+                        onEnd: (evt) => {
+                            evt.from.style.overflow = ''; // Restore overflow after drag
+                        },
                     });
                 }
             });
         }
     }, [columnsData]);
+    
 
     const handleColumnEnd = (evt) => {
         const updatedColumns = [...columnsData];
@@ -110,13 +125,33 @@ const DraggableBoard = () => {
         updateBoardDataOnServer(updatedColumns);
     };
 
-    const handleCardEnd = (evt) => {
+    const handleCardEnd = (evt, colIndex) => {
         const sourceColumnIndex = evt.from.closest('.draggable-column').getAttribute('data-colindex');
         const destinationColumnIndex = evt.to.closest('.draggable-column').getAttribute('data-colindex');
 
+        // Ensure the indices are valid and columns exist
+        if (sourceColumnIndex === null || destinationColumnIndex === null) {
+            console.error('Invalid column indices:', sourceColumnIndex, destinationColumnIndex);
+            return;
+        }
+
+        const srcIndex = parseInt(sourceColumnIndex, 10);
+        const destIndex = parseInt(destinationColumnIndex, 10);
+
+        if (!columnsData[srcIndex] || !columnsData[destIndex]) {
+            console.error('Invalid column data:', columnsData[srcIndex], columnsData[destIndex]);
+            return;
+        }
+
         const updatedColumns = [...columnsData];
-        const [movedCard] = updatedColumns[sourceColumnIndex].tasks.splice(evt.oldIndex, 1);
-        updatedColumns[destinationColumnIndex].tasks.splice(evt.newIndex, 0, movedCard);
+        const [movedCard] = updatedColumns[srcIndex].tasks.splice(evt.oldIndex, 1);
+
+        // Ensure tasks exist in the destination column
+        if (!updatedColumns[destIndex].tasks) {
+            updatedColumns[destIndex].tasks = [];
+        }
+
+        updatedColumns[destIndex].tasks.splice(evt.newIndex, 0, movedCard);
         setColumnsData(updatedColumns);
         updateBoardDataOnServer(updatedColumns);
     };
@@ -153,9 +188,12 @@ const DraggableBoard = () => {
             const newCard = {
                 title: newCardName,
                 description: '',
-                priority: 'medium',
+                priority: 'medium', // Set a default priority
             };
             const updatedColumns = [...columnsData];
+            if (!updatedColumns[colIndex].tasks) {
+                updatedColumns[colIndex].tasks = []; // Ensure tasks array exists
+            }
             updatedColumns[colIndex].tasks.push(newCard);
             setColumnsData(updatedColumns);
             setNewCardName('');
@@ -193,33 +231,36 @@ const DraggableBoard = () => {
                         )}
 
                         <div className="draggable-column p-2 bg-[#F4F6F8] rounded-lg">
-                            {column.tasks.map((item, cardIndex) => (
-                                <div key={cardIndex} className="draggable-card bg-white border rounded-lg mb-2 p-3">
-                                    <div className="flex items-center mb-2">
-                                        <div className={`h-3 w-3 ${item.priority === 'high' ? 'bg-red-500' : item.priority === 'medium' ? 'bg-yellow-500' : 'bg-green-500'} rounded-full`}></div>
-                                        <p className="text-sm font-medium ml-2">{item.title}</p>
-                                    </div>
-                                    <div className="flex items-center justify-between text-gray-500 text-xs">
-                                        <div className="flex items-center">
-                                            <GoPaperclip className="mr-1" />
-                                            <span>{item.attachments || 0}</span>
-                                        </div>
-                                        <div className="flex items-center">
-                                            <BiMessageSquareDetail className="mr-1" />
-                                            <span>{item.comments || 0}</span>
-                                        </div>
-                                        <div className="flex items-center">
-                                            <FaUserCircle className="mr-1" />
-                                            <span>{item.users ? item.users.length : 0}</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
+                            {column.tasks && column.tasks.map((item, cardIndex) => {
+                                console.log('Rendering item:', item); // Add this line to debug
 
+                                if (!item) {
+                                    return null; // Skip rendering if item is undefined or null
+                                }
+
+                                // Default priority in case it's missing
+                                const priority = item.priority || 'low';
+
+                                return (
+                                    <div key={cardIndex} data-cardid={cardIndex} className="draggable-card bg-white border rounded-lg mb-2 p-3">
+                                        <div className="flex items-center mb-2">
+                                            <div className={`h-3 w-3 ${priority === 'high' ? 'bg-red-500' : priority === 'medium' ? 'bg-yellow-500' : 'bg-green-500'} rounded-full`}></div>
+                                            <p className="text-sm font-medium ml-2">{item.title}</p>
+                                        </div>
+                                        <div className="flex items-center justify-between text-gray-500 text-xs">
+                                            <div className="flex items-center">
+                                                <GoPaperclip className="mr-1" />
+                                                <BiMessageSquareDetail className="mr-1" />
+                                                <FaUserCircle className="mr-1" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
                         <button
                             onClick={() => setShowCardForm(colIndex)}
-                            className="bg-green-500 text-white rounded-lg py-2 px-4 mt-4"
+                            className="bg-blue-500 text-white rounded-lg py-2 px-4 mt-2"
                         >
                             Add Card
                         </button>
@@ -228,21 +269,30 @@ const DraggableBoard = () => {
             </div>
 
             {showColumnForm && (
-                <div className="mb-4">
-                    <input
-                        type="text"
-                        value={newColumnName}
-                        onChange={(e) => setNewColumnName(e.target.value)}
-                        placeholder="New Column Title"
-                        className="border rounded-lg p-2 w-full"
-                    />
-                    <button onClick={handleAddNewColumn} className="bg-blue-500 text-white rounded-lg py-2 px-4 mt-2">
-                        Add Column
-                    </button>
+                <div className="fixed inset-0 flex items-center justify-center bg-gray-500 bg-opacity-50 z-50">
+                    <div className="bg-white p-6 rounded-lg shadow-lg w-[300px]">
+                        <h3 className="text-lg font-medium mb-4">Add New Column</h3>
+                        <input
+                            type="text"
+                            value={newColumnName}
+                            onChange={(e) => setNewColumnName(e.target.value)}
+                            placeholder="Column Name"
+                            className="border rounded-lg p-2 w-full mb-4"
+                        />
+                        <button
+                            onClick={handleAddNewColumn}
+                            className="bg-blue-500 text-white rounded-lg py-2 px-4"
+                        >
+                            Add Column
+                        </button>
+                    </div>
                 </div>
             )}
 
-            <button onClick={() => setShowColumnForm(true)} className="bg-blue-500 text-white rounded-lg py-2 px-4 mt-4">
+            <button
+                onClick={() => setShowColumnForm(true)}
+                className="bg-green-500 text-white rounded-lg py-2 px-4"
+            >
                 Add Column
             </button>
         </div>
