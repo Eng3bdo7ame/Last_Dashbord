@@ -6,132 +6,36 @@ import { BiMessageSquareDetail } from "react-icons/bi";
 import { FaUserCircle } from "react-icons/fa";
 import EditTaskForm from './updateTask'; // تأكد من المسار الصحيح لمكون نموذج التعديل
 
-const boardId = 1;
-const boardSocketUrl = `wss://dashboard.cowdly.com/ws/boards/${boardId}/`;
-
-const TaskPage = () => {
+const DraggableBoard = () => {
     const [columnsData, setColumnsData] = useState(() => {
         const savedData = localStorage.getItem('columnsData');
         return savedData ? JSON.parse(savedData) : initialColumnsData;
     });
-
-
 
     const [showForm, setShowForm] = useState(false);
     const [newColumnName, setNewColumnName] = useState('');
     const [newCardName, setNewCardName] = useState('');
     const [showCardForm, setShowCardForm] = useState(null);
     const [selectedCard, setSelectedCard] = useState(null);
-    const [boardSocket, setBoardSocket] = useState(null);
-
-    // WebSocket Setup for Real-Time Updates
-    useEffect(() => {
-        const socket = new WebSocket(boardSocketUrl);
-        setBoardSocket(socket);
-
-        socket.onopen = () => {
-            console.log('Connected to WebSocket for board updates.');
-        };
-
-        socket.onmessage = (event) => {
-            try {
-                const data = JSON.parse(event.data);
-                if (data.board_data) {
-                    console.log('Board updated:', data.board_data);
-                    setColumnsData(data.board_data.lists);
-                    localStorage.setItem('columnsData', JSON.stringify(data.board_data.lists));
-                } else {
-                    console.warn('No board_data in the received message');
-                }
-            } catch (error) {
-                console.error('Error parsing board update message:', error);
-            }
-        };
-
-        socket.onerror = (error) => {
-            console.error('Board WebSocket error:', error.message || error);
-        };
-
-        socket.onclose = (event) => {
-            console.log('Board WebSocket closed:', event.reason || 'No reason provided');
-        };
-
-        // Cleanup on unmount
-        return () => {
-            socket.close();
-        };
-    }, []);
 
     useEffect(() => {
-        if (columnsData.length > 0) {
-            const columnsContainer = document.querySelector('.draggable-board');
-            if (columnsContainer) {
-                Sortable.create(columnsContainer, {
-                    group: 'columns',
-                    animation: 150,
-                    onEnd: handleColumnEnd,
-                });
-            }
-
-            columnsData.forEach((_, colIndex) => {
-                const columnElement = document.querySelector(`#column-${colIndex}`);
-                if (columnElement) {
-                    Sortable.create(columnElement, {
-                        group: 'cards',
-                        animation: 150,
-                        onEnd: handleCardEnd,
-                    });
-                }
-            });
-        }
+        localStorage.setItem('columnsData', JSON.stringify(columnsData));
     }, [columnsData]);
 
-    const handleColumnEnd = (evt) => {
-        const updatedColumns = [...columnsData];
-        const [movedColumn] = updatedColumns.splice(evt.oldIndex, 1);
-        updatedColumns.splice(evt.newIndex, 0, movedColumn);
-        setColumnsData(updatedColumns);
-        updateBoardDataOnServer(updatedColumns);
-    };
+    useEffect(() => {
+        const containers = document.querySelectorAll('.draggable-column');
 
-    const handleCardEnd = (evt) => {
-        const sourceColumnIndex = parseInt(evt.from.closest('.draggable-column').getAttribute('data-colindex'));
-        const destinationColumnIndex = parseInt(evt.to.closest('.draggable-column').getAttribute('data-colindex'));
-    
-        if (isNaN(sourceColumnIndex) || isNaN(destinationColumnIndex)) {
-            console.error('Column index is invalid');
-            return;
-        }
-    
-        const updatedColumns = [...columnsData];
-        const sourceTasks = updatedColumns[sourceColumnIndex].tasks;
-        const destinationTasks = updatedColumns[destinationColumnIndex].tasks;
-    
-        // Check if valid task is being moved
-        if (evt.oldIndex < sourceTasks.length) {
-            const [movedCard] = sourceTasks.splice(evt.oldIndex, 1); // Remove task from source
-            destinationTasks.splice(evt.newIndex, 0, movedCard); // Insert task into destination
-    
-            // Update state and server with the new order
-            setColumnsData(updatedColumns);
-            updateBoardDataOnServer(updatedColumns);
-        } else {
-            console.warn('Invalid task move operation');
-        }
-    };
-    
-
-    const updateBoardDataOnServer = (updatedColumns) => {
-        if (boardSocket) {
-            const boardData = {
-                action: 'update_board',
-                board: { lists: updatedColumns },
-            };
-            boardSocket.send(JSON.stringify(boardData)); // Send to WebSocket
-        } else {
-            console.warn('Board WebSocket is not connected.');
-        }
-    };
+        containers.forEach(container => {
+            new Sortable(container, {
+                draggable: '.draggable-card',
+                group: 'shared',
+                animation: 150,
+                onEnd: (evt) => {
+                    // Handle the logic when dragging ends, e.g., update state
+                }
+            });
+        });
+    }, [columnsData]);
 
     const handleAddNewColumn = () => {
         if (newColumnName.trim()) {
@@ -139,11 +43,9 @@ const TaskPage = () => {
                 title: newColumnName,
                 items: []
             };
-            const updatedColumns = [...columnsData, newColumn];
-            setColumnsData(updatedColumns);
+            setColumnsData([...columnsData, newColumn]);
             setShowForm(false);
             setNewColumnName('');
-            updateBoardDataOnServer(updatedColumns); // Send update to server
         }
     };
 
@@ -158,17 +60,25 @@ const TaskPage = () => {
                 users: []
             };
             const updatedColumns = [...columnsData];
-            updatedColumns[colIndex].tasks.push(newCard);
-    
+            updatedColumns[colIndex].items.push(newCard);
             setColumnsData(updatedColumns);
-            setNewCardName(''); // Reset the input field
+            setNewCardName('');
             setShowCardForm(null);
-            updateBoardDataOnServer(updatedColumns);
-        } else {
-            console.warn('Card name is empty');
         }
     };
-    
+
+    const handleCardClick = (card) => {
+        setSelectedCard(card);
+    };
+
+    const handleSaveCard = (updatedCard) => {
+        const updatedColumns = columnsData.map(column => ({
+            ...column,
+            items: column.items.map(item => (item === selectedCard ? updatedCard : item))
+        }));
+        setColumnsData(updatedColumns);
+        setSelectedCard(null);
+    };
 
     return (
         <div className=''>
@@ -218,7 +128,7 @@ const TaskPage = () => {
                                 <div
                                     key={itemIndex}
                                     className="draggable-card p-4 bg-white rounded-lg shadow-md cursor-move"
-                                    onClick={() => handleCardClick(item)}
+                                    onClick={() => handleCardClick(item)} // Handle card click
                                 >
                                     <span className={`inline-block px-2 py-1 text-sm font-semibold ${item.labelColor} rounded-full mb-2`}>
                                         {item.label}
@@ -262,14 +172,22 @@ const TaskPage = () => {
                                     placeholder="Enter card name"
                                     value={newCardName}
                                     onChange={(e) => setNewCardName(e.target.value)}
-                                    className="border border-gray-300 rounded-lg px-4 py-2 w-full text-lg"
+                                    className="border border-gray-300 rounded-lg px-4 py-2 w-full text-xl"
                                 />
-                                <button
-                                    className="bg-green-500 text-white rounded-lg text-lg px-4 py-2 mt-2"
-                                    onClick={() => handleAddNewCard(colIndex)}
-                                >
-                                    Add Card
-                                </button>
+                                <div className="mt-4">
+                                    <button
+                                        className="bg-green-500 text-white rounded-lg text-xl px-4 py-2 mr-4"
+                                        onClick={() => handleAddNewCard(colIndex)}
+                                    >
+                                        Confirm
+                                    </button>
+                                    <button
+                                        className="bg-red-500 text-white rounded-lg text-xl px-4 py-2"
+                                        onClick={() => setShowCardForm(null)}
+                                    >
+                                        Cancel
+                                    </button>
+                                </div>
                             </div>
                         )}
                     </div>
@@ -277,10 +195,22 @@ const TaskPage = () => {
             </div>
 
             {selectedCard && (
-                <EditTaskForm card={selectedCard} onSave={handleSaveCard} onClose={() => setSelectedCard(null)} />
+                <div className='fixed inset-0 bg-black bg-opacity-50 z-40 backdrop-blur-sm'
+                    onClick={() => setSelectedCard(null)}
+                >
+                    <div className={`fixed top-0 right-0 h-full w-[35%] bg-white shadow-lg z-50 transform transition-transform ease-in-out duration-300 ${selectedCard ? 'translate-x-0' : 'translate-x-full'}`}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <EditTaskForm
+                            card={selectedCard}
+                            onClose={() => setSelectedCard(null)}
+                            onSave={handleSaveCard}
+                        />
+                    </div>
+                </div>
             )}
         </div>
     );
 };
 
-export default TaskPage;
+export default DraggableBoard;
