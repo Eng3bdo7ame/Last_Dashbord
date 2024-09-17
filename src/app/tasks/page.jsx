@@ -112,15 +112,31 @@ const DraggableBoard = () => {
     };
 
     const handleCardEnd = (evt) => {
-        const sourceColumnIndex = evt.from.closest('.draggable-column').getAttribute('data-colindex');
-        const destinationColumnIndex = evt.to.closest('.draggable-column').getAttribute('data-colindex');
-
+        const sourceColumnIndex = parseInt(evt.from.closest('.draggable-column').getAttribute('data-colindex'));
+        const destinationColumnIndex = parseInt(evt.to.closest('.draggable-column').getAttribute('data-colindex'));
+    
+        if (isNaN(sourceColumnIndex) || isNaN(destinationColumnIndex)) {
+            console.error('Column index is invalid');
+            return;
+        }
+    
         const updatedColumns = [...columnsData];
-        const [movedCard] = updatedColumns[sourceColumnIndex].tasks.splice(evt.oldIndex, 1);
-        updatedColumns[destinationColumnIndex].tasks.splice(evt.newIndex, 0, movedCard);
-        setColumnsData(updatedColumns);
-        updateBoardDataOnServer(updatedColumns);
+        const sourceTasks = updatedColumns[sourceColumnIndex].tasks;
+        const destinationTasks = updatedColumns[destinationColumnIndex].tasks;
+    
+        // Check if valid task is being moved
+        if (evt.oldIndex < sourceTasks.length) {
+            const [movedCard] = sourceTasks.splice(evt.oldIndex, 1); // Remove task from source
+            destinationTasks.splice(evt.newIndex, 0, movedCard); // Insert task into destination
+    
+            // Update state and server with the new order
+            setColumnsData(updatedColumns);
+            updateBoardDataOnServer(updatedColumns);
+        } else {
+            console.warn('Invalid task move operation');
+        }
     };
+    
 
     const updateBoardDataOnServer = (updatedColumns) => {
         if (boardSocket) {
@@ -155,15 +171,23 @@ const DraggableBoard = () => {
                 title: newCardName,
                 description: '',
                 priority: 'medium',
+                attachments: 0,
+                comments: 0,
+                users: [],
             };
+    
             const updatedColumns = [...columnsData];
             updatedColumns[colIndex].tasks.push(newCard);
+    
             setColumnsData(updatedColumns);
-            setNewCardName('');
+            setNewCardName(''); // Reset the input field
             setShowCardForm(null);
             updateBoardDataOnServer(updatedColumns);
+        } else {
+            console.warn('Card name is empty');
         }
     };
+    
 
     return (
         <div>
