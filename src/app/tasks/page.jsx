@@ -1,16 +1,15 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import io from 'socket.io-client';
 import Sortable from 'sortablejs';
 import { GoPaperclip } from 'react-icons/go';
 import { BiMessageSquareDetail } from 'react-icons/bi';
 import { FaUserCircle } from 'react-icons/fa';
 import { CiMenuKebab } from 'react-icons/ci';
 
-// WebSocket URL and board data initialization
 const boardId = 1;
-const socketUrl = `wss://dashboard.cowdly.com/ws/boards/${boardId}/`;
+const defaultApiUrl = `https://dashboard.cowdly.com/api/kanban/boards/`;
+const boardSocketUrl = `wss://dashboard.cowdly.com/ws/boards/${boardId}/`;
 
 const DraggableBoard = () => {
     const [columnsData, setColumnsData] = useState([]);
@@ -18,71 +17,64 @@ const DraggableBoard = () => {
     const [newCardName, setNewCardName] = useState('');
     const [showColumnForm, setShowColumnForm] = useState(false);
     const [showCardForm, setShowCardForm] = useState(null);
-    const [socket, setSocket] = useState(null);
-
-    const boardData = {
-        action: "update_board",
-        board: {
-            lists: [
-                {
-                    name: "To Do",
-                    description: "Tasks to be done",
-                    tasks: [
-                        { title: "Task 1", description: "Description 1", priority: "medium" },
-                        { title: "Task 2", description: "Description 2", priority: "high" },
-                    ],
-                },
-                {
-                    name: "In Progress",
-                    description: "Tasks in progress",
-                    tasks: [
-                        { title: "Task 3", description: "Description 3", priority: "low" },
-                    ],
-                },
-            ],
-        },
-    };
+    const [boardSocket, setBoardSocket] = useState(null);
 
     useEffect(() => {
-        // Initialize WebSocket
-        const webSocket = new WebSocket(socketUrl);
-        setSocket(webSocket);
-
-        webSocket.onopen = () => {
-            console.log("Connected to WebSocket server");
+        // Fetch initial data via HTTP
+        const fetchInitialData = async () => {
             try {
-                webSocket.send(JSON.stringify(boardData));
-            } catch (error) {
-                console.error("Error sending data:", error);
-            }
-        };
-
-        webSocket.onmessage = (event) => {
-            try {
-                const data = JSON.parse(event.data);
+                const response = await fetch(defaultApiUrl);
+                const data = await response.json();
                 if (data.board_data) {
-                    console.log("Board updated:", data.board_data);
+                    console.log('Default board data received:', data.board_data);
                     setColumnsData(data.board_data.lists);
                     localStorage.setItem('boardData', JSON.stringify(data.board_data.lists));
                 } else {
-                    console.warn("No board_data in the received message");
+                    console.warn('No board_data in the fetched response');
                 }
             } catch (error) {
-                console.error("Error parsing message data:", error);
+                console.error('Error fetching default data:', error);
             }
         };
 
-        webSocket.onerror = (error) => {
-            console.error("WebSocket Error:", error.message || error);
+        fetchInitialData();
+    }, []);
+
+    useEffect(() => {
+        // WebSocket for real-time updates
+        const boardSocket = new WebSocket(boardSocketUrl);
+        setBoardSocket(boardSocket);
+
+        boardSocket.onopen = () => {
+            console.log('Connected to WebSocket for board updates.');
         };
 
-        webSocket.onclose = (event) => {
-            console.log("WebSocket closed:", event.reason || "No reason provided");
+        boardSocket.onmessage = (event) => {
+            try {
+                const data = JSON.parse(event.data);
+                if (data.board_data) {
+                    console.log('Board updated:', data.board_data);
+                    setColumnsData(data.board_data.lists);
+                    localStorage.setItem('boardData', JSON.stringify(data.board_data.lists));
+                } else {
+                    console.warn('No board_data in the received message');
+                }
+            } catch (error) {
+                console.error('Error parsing board update message:', error);
+            }
+        };
+
+        boardSocket.onerror = (error) => {
+            console.error('Board WebSocket error:', error.message || error);
+        };
+
+        boardSocket.onclose = (event) => {
+            console.log('Board WebSocket closed:', event.reason || 'No reason provided');
         };
 
         // Clean up on unmount
         return () => {
-            webSocket.close();
+            boardSocket.close();
         };
     }, []);
 
@@ -130,14 +122,14 @@ const DraggableBoard = () => {
     };
 
     const updateBoardDataOnServer = (updatedColumns) => {
-        if (socket) {
+        if (boardSocket) {
             const boardData = {
                 action: 'update_board',
                 board: { lists: updatedColumns },
             };
-            socket.send(JSON.stringify(boardData));
+            boardSocket.send(JSON.stringify(boardData));
         } else {
-            console.warn('WebSocket is not connected.');
+            console.warn('Board WebSocket is not connected.');
         }
     };
 
