@@ -6,30 +6,49 @@ import Sortable from 'sortablejs';
 import { GoPaperclip } from 'react-icons/go';
 import { BiMessageSquareDetail } from 'react-icons/bi';
 import { FaUserCircle } from 'react-icons/fa';
-import EditTaskForm from './updateTask'; // Ensure the path is correct
 import { CiMenuKebab } from 'react-icons/ci';
-import { RiDeleteBin7Line } from 'react-icons/ri';
 
-const boardId = 'your-board-id'; // Replace with the actual board ID
-const socketUrl = `wss://dashboard.cowdly.com/ws/boards/${boardId}/`;
-const socket = io(socketUrl, {
-    query: { boardId },
-});
+// WebSocket setup
+const boardId = 1;
+const socket = new WebSocket(`wss://dashboard.cowdly.com/ws/boards/${boardId}/`);
 
 const DraggableBoard = () => {
     const [columnsData, setColumnsData] = useState([]);
-    const [showForm, setShowForm] = useState(false);
     const [newColumnName, setNewColumnName] = useState('');
     const [newCardName, setNewCardName] = useState('');
+    const [showColumnForm, setShowColumnForm] = useState(false);
     const [showCardForm, setShowCardForm] = useState(null);
-    const [selectedCard, setSelectedCard] = useState(null);
-    const [showMenuIndex, setShowMenuIndex] = useState(null); // For toggling menu
+    const [socket, setSocket] = useState(null);
 
     useEffect(() => {
-        // Load data from Socket.IO
-        socket.on('board_data', (data) => {
-            setColumnsData(data.lists); // Update the columnsData from server
-        });
+        // Load data from local storage on component mount
+        const savedData = localStorage.getItem('boardData');
+        if (savedData) {
+            setColumnsData(JSON.parse(savedData));
+        }
+
+        // WebSocket events
+        socket.onopen = () => {
+            console.log('Connected to WebSocket server');
+            socket.send(JSON.stringify({ action: 'get_board' }));
+        };
+
+        socket.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            if (data.board_data) {
+                setColumnsData(data.board_data.lists); // Update the columnsData from server
+                // Save to local storage
+                localStorage.setItem('boardData', JSON.stringify(data.board_data.lists));
+            }
+        };
+
+        socket.onerror = (error) => {
+            console.error('WebSocket Error:', error.message || error);
+        };
+
+        socket.onclose = (event) => {
+            console.log('WebSocket closed:', event.reason || 'No reason provided');
+        };
 
         // Set up Sortable.js for columns and cards
         const columnContainers = document.querySelectorAll('.draggable-board');
@@ -52,7 +71,7 @@ const DraggableBoard = () => {
         });
 
         return () => {
-            socket.off('board_data'); // Clean up event listener on component unmount
+            socket.close(); // Clean up WebSocket connection on component unmount
         };
     }, []);
 
@@ -67,9 +86,9 @@ const DraggableBoard = () => {
         updatedColumns.splice(evt.newIndex, 0, movedColumn);
         setColumnsData(updatedColumns);
         updateBoardDataOnServer(updatedColumns);
+        localStorage.setItem('boardData', JSON.stringify(updatedColumns));
     };
 
-    // Update board on card drag
     const handleCardEnd = (evt) => {
         if (evt.from !== evt.to) {
             const sourceColumnIndex = Array.from(evt.from.parentNode.children).indexOf(evt.from);
@@ -80,15 +99,17 @@ const DraggableBoard = () => {
             updatedColumns[destinationColumnIndex].items.splice(evt.newIndex, 0, movedCard);
             setColumnsData(updatedColumns);
             updateBoardDataOnServer(updatedColumns);
+            localStorage.setItem('boardData', JSON.stringify(updatedColumns));
         }
     };
 
-    // Function to update the board data via Socket.IO
+    // Function to update the board data via WebSocket
     const updateBoardDataOnServer = (updatedColumns) => {
         const boardData = {
+            action: 'update_board',
             board: { lists: updatedColumns },
         };
-        socket.emit('update_board', boardData);
+        socket.send(JSON.stringify(boardData));
     };
 
     const handleAddNewColumn = () => {
@@ -99,9 +120,10 @@ const DraggableBoard = () => {
             };
             const updatedColumns = [...columnsData, newColumn];
             setColumnsData(updatedColumns);
-            setShowForm(false);
+            setShowColumnForm(false);
             setNewColumnName('');
             updateBoardDataOnServer(updatedColumns);
+            localStorage.setItem('boardData', JSON.stringify(updatedColumns));
         }
     };
 
@@ -121,23 +143,8 @@ const DraggableBoard = () => {
             setNewCardName('');
             setShowCardForm(null);
             updateBoardDataOnServer(updatedColumns);
+            localStorage.setItem('boardData', JSON.stringify(updatedColumns));
         }
-    };
-
-    const handleCardClick = (card) => {
-        setSelectedCard(card);
-    };
-
-    const handleSaveCard = (updatedCard) => {
-        const updatedColumns = columnsData.map((column) => ({
-            ...column,
-            items: column.items.map((item) =>
-                item === selectedCard ? updatedCard : item
-            ),
-        }));
-        setColumnsData(updatedColumns);
-        setSelectedCard(null);
-        updateBoardDataOnServer(updatedColumns);
     };
 
     const handleDeleteColumn = (colIndex) => {
@@ -150,7 +157,7 @@ const DraggableBoard = () => {
         <div>
             <div className="draggable-board flex overflow-x-auto space-x-4 p-8">
                 {columnsData.map((column, colIndex) => (
-                    <div key={colIndex} className="min-w-[260px]">
+                    <div key={colIndex} id={`column-${colIndex}`} className="min-w-[260px]">
                         <div className="flex justify-between items-center mb-3 relative">
                             <h3 className="text-[1.125rem] font-medium text-[#3b4056]">
                                 {column.title}
@@ -159,6 +166,7 @@ const DraggableBoard = () => {
                                 className="text-black cursor-pointer"
                                 onClick={() => toggleMenu(colIndex)}
                             />
+
                             {showMenuIndex === colIndex && (
                                 <div className="absolute top-8 right-0 bg-white border rounded-lg shadow-lg z-10 w-36">
                                     <div className="menu flex flex-col py-2 px-3">
@@ -178,90 +186,82 @@ const DraggableBoard = () => {
                             )}
                         </div>
 
-                        <div className="draggable-column space-y-3">
+                        <div className="draggable-column p-2 bg-[#F4F6F8] rounded-lg">
                             {column.items.map((item, cardIndex) => (
                                 <div
                                     key={cardIndex}
-                                    className="bg-white p-4 rounded-lg draggable-card shadow cursor-pointer"
-                                    onClick={() => handleCardClick(item)}
+                                    className="draggable-card bg-white border rounded-lg mb-2 p-3"
                                 >
-                                    <div className={`inline-block px-2 py-1 text-sm rounded-md ${item.labelColor}`}>
-                                        {item.label}
+                                    <div className="flex items-center mb-2">
+                                        <div className={`h-3 w-3 ${item.labelColor} rounded-full`}></div>
+                                        <p className="text-sm font-medium ml-2">{item.title}</p>
                                     </div>
                                     <h4 className="font-medium mt-2 text-lg">{item.title}</h4>
+
                                     <div className="mt-4 flex justify-between items-center">
                                         <div className="flex items-center space-x-1">
                                             <GoPaperclip />
                                             <span>{item.attachments}</span>
                                         </div>
-                                        <div className="flex items-center space-x-1">
-                                            <BiMessageSquareDetail />
+                                        <div className="flex items-center">
+                                            <BiMessageSquareDetail className="mr-1" />
                                             <span>{item.comments}</span>
                                         </div>
                                         <div className="flex items-center space-x-1">
                                             {item.users.length ? (
                                                 item.users.map((user, index) => (
-                                                    <FaUserCircle key={index} className="text-gray-400" />
+                                                    <FaUserCircle key={index} />
                                                 ))
                                             ) : (
-                                                <FaUserCircle className="text-gray-400" />
+                                                <FaUserCircle />
                                             )}
                                         </div>
                                     </div>
                                 </div>
                             ))}
                             {showCardForm === colIndex && (
-                                <div className="bg-white p-4 rounded-lg shadow mt-4">
+                                <div className="mt-4 flex">
                                     <input
                                         type="text"
+                                        placeholder="New Card Title"
                                         value={newCardName}
                                         onChange={(e) => setNewCardName(e.target.value)}
-                                        className="w-full border border-gray-300 rounded-lg px-3 py-2"
-                                        placeholder="Card Name"
+                                        className="border rounded-l-lg p-2 w-full"
                                     />
                                     <button
                                         onClick={() => handleAddNewCard(colIndex)}
-                                        className="mt-2 w-full bg-blue-500 text-white py-2 rounded-lg"
+                                        className="bg-blue-500 text-white rounded-r-lg px-4"
                                     >
-                                        Add Card
+                                        Add
                                     </button>
                                 </div>
                             )}
                         </div>
-                        {!showCardForm && (
-                            <button
-                                onClick={() => setShowCardForm(colIndex)}
-                                className="mt-2 bg-green-500 text-white py-2 px-4 rounded-lg"
-                            >
-                                Add New Card
-                            </button>
-                        )}
                     </div>
                 ))}
             </div>
+            <button
+                onClick={() => setShowForm(true)}
+                className="bg-green-500 text-white p-2 rounded-lg mt-4"
+            >
+                Add New Column
+            </button>
             {showForm && (
-                <div className="bg-white p-4 rounded-lg shadow mt-4">
+                <div className="mt-4 flex">
                     <input
                         type="text"
                         value={newColumnName}
                         onChange={(e) => setNewColumnName(e.target.value)}
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2"
-                        placeholder="Column Name"
+                        className="border rounded-l-lg p-2 w-full"
                     />
                     <button
                         onClick={handleAddNewColumn}
-                        className="mt-2 w-full bg-blue-500 text-white py-2 rounded-lg"
+                        className="bg-blue-500 text-white rounded-r-lg px-4"
                     >
                         Add Column
                     </button>
                 </div>
             )}
-            <button
-                onClick={() => setShowForm(!showForm)}
-                className="mt-4 bg-blue-500 text-white py-2 px-4 rounded-lg"
-            >
-                {showForm ? 'Cancel' : 'Add New Column'}
-            </button>
             {selectedCard && (
                 <EditTaskForm
                     card={selectedCard}
