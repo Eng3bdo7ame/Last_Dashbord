@@ -4,7 +4,8 @@ import Sortable from 'sortablejs';
 import { GoPaperclip } from "react-icons/go";
 import { BiMessageSquareDetail } from "react-icons/bi";
 import { FaUserCircle } from "react-icons/fa";
-import EditTaskForm from './updateTask'; // تأكد من المسار الصحيح لمكون نموذج التعديل
+import EditTaskForm from './updateTask'; 
+import Image from 'next/image';
 
 const initialColumnsData = [
     {
@@ -45,7 +46,7 @@ const initialColumnsData = [
                 title: "Find new images for pages",
                 attachments: 10,
                 comments: 18,
-                image: "/placeholder.svg", // Placeholder image
+                image: "/placeholder.svg", 
                 users: [1, 2, 3, 4]
             },
         ]
@@ -98,7 +99,6 @@ const DraggableBoard = () => {
                 group: 'shared',
                 animation: 150,
                 onEnd: (evt) => {
-                    // Handle the logic when dragging ends, e.g., update state
                 }
             });
         });
@@ -195,14 +195,14 @@ const DraggableBoard = () => {
                                 <div
                                     key={itemIndex}
                                     className="draggable-card p-4 bg-white rounded-lg shadow-md cursor-move"
-                                    onClick={() => handleCardClick(item)} // Handle card click
+                                    onClick={() => handleCardClick(item)} 
                                 >
                                     <span className={`inline-block px-2 py-1 text-xl font-semibold ${item.labelColor} rounded-full mb-2`}>
                                         {item.label}
                                     </span>
                                     {item.image && (
                                         <div className="mb-4">
-                                            <img src={item.image} alt={item.title} className="rounded-lg w-full" />
+                                            <Image src={item.image} alt={item.title} className="rounded-lg w-full" />
                                         </div>
                                     )}
                                     <h4 className="text-2xl font-medium mb-2">{item.title}</h4>
