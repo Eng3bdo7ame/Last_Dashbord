@@ -5,7 +5,6 @@ import { LuClock } from "react-icons/lu";
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import FormSelect from "../../form/FormSelect";
-
 const EditTaskForm = ({ card, onClose, onSave }) => {
     const [title, setTitle] = useState('');
     const [dueDate, setDueDate] = useState(null);
@@ -15,7 +14,7 @@ const EditTaskForm = ({ card, onClose, onSave }) => {
 
     const formRef = useRef(null);
 
-    useEffect(() => {
+    useEffect(() => { 
         if (card) {
             setTitle(card.title || '');
             setDueDate(card.dueDate ? new Date(card.dueDate) : null);

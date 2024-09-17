@@ -3,12 +3,14 @@ import axios from 'axios';
 import Cookies from 'js-cookie';
 import Table from '../Table';
 import AddProjects from './AddProjects'; // Ensure the path is correct
+import PreviewProjects from './PreviewProjects';
 
 const ProjectTable = ({ openPreview, openCreate }) => {
     const [modalType, setModalType] = useState(null);
     const [tableData, setTableData] = useState([]);
     const [tableHeaders, setTableHeaders] = useState([]);
     const [clients, setClients] = useState([]);
+    const [selectedProjectId, setSelectedProjectId] = useState(null);
 
     const fetchData = useCallback(async () => {
         try {
@@ -35,15 +37,13 @@ const ProjectTable = ({ openPreview, openCreate }) => {
             const projects = projectsResponse.data;
             const clientsData = clientsResponse.data;
 
-            // Save clients for later use
-            setClients(clientsData);
+             setClients(clientsData);
 
             if (projects.length > 0) {
                 const headers = Object.keys(projects[0]);
                 setTableHeaders(headers.map(header => ({ key: header, label: header })));
 
-                // Replace client ID with client name
-                const formattedProjects = projects.map(project => {
+                 const formattedProjects = projects.map(project => {
                     const client = clientsData.find(c => c.id === project.client);
                     return {
                         ...project,
@@ -62,11 +62,10 @@ const ProjectTable = ({ openPreview, openCreate }) => {
     }, []);
 
     useEffect(() => {
-        fetchData(); // Fetch data on component mount
+        fetchData();  
     }, [fetchData]);
 
-    // Function to add the new project directly to the table without fetching
-    const addNewProjectToTable = (newProject) => {
+     const addNewProjectToTable = (newProject) => {
         const client = clients.find(c => c.id === newProject.client);
         const formattedProject = {
             ...newProject,
@@ -85,11 +84,14 @@ const ProjectTable = ({ openPreview, openCreate }) => {
                 addItemLabel="Project"
                 onDelete={() => console.log('Delete function not implemented')}
             />
+            {modalType === 'preview' && (
+                <PreviewProjects closeModal={() => setModalType(null)} projectIdId={selectedProjectId} />
+            )}
             {modalType === "project" && (
                 <AddProjects
                     closeModal={() => setModalType(null)}
                     modal={modalType === "project"}
-                    onClientAdded={addNewProjectToTable} // Pass the function to update the table
+                    onClientAdded={addNewProjectToTable}  
                 />
             )}
         </div>
